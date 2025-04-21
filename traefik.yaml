@@ -13,7 +13,7 @@ services:
       - --providers.docker.endpoint=unix:///var/run/docker.sock
       # Configuração para SSL Let's Encrypt
       - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.le.acme.email=${EMAIL}
+      - --certificatesresolvers.le.acme.email=wenderson.wanzeller@gmail.com
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
       # Global HTTP -> HTTPS
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
