@@ -94,14 +94,14 @@ echo "GLOBAL_SECRET = $GLOBAL_SECRET"
 read -p "⚠️  Copie e guarde em local seguro. Pressione ENTER para continuar..."
 
 # 9) Gera env.wanzeller
-cat > "$WORKDIR/env.wanzeller" <<EOF
+cat > "$WORKDIR/.env.wanzeller" <<EOF
 DOMAIN=$DOMAIN
 EMAIL=$EMAIL
 USER_NAME=$USER_NAME
 RADICAL=$RADICAL
 GLOBAL_SECRET=$GLOBAL_SECRET
 EOF
-echo "✅ Arquivo 'env.wanzeller' criado em $WORKDIR."
+echo "✅ Arquivo '.env.wanzeller' criado em $WORKDIR."
 
 # 10) Cria redes
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true

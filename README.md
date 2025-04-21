@@ -12,7 +12,7 @@ Este projeto fornece uma instalação **automática e pronta para produção** d
 - Definição do domínio base (`seudominio.com`) usada em todas as stacks
 - Armazenamento seguro de uma `GLOBAL_SECRET` compartilhada via Docker Secret
 - Tudo controlado por script (`bootstrap.sh`) com interação mínima
-- Geração de arquivo `env.wanzeller` com todas as variáveis importantes
+- Geração de arquivo `~/wanzeller/env.wanzeller` com todas as variáveis importantes
 - Exibição em tela de todas as variáveis com pausa para cópia manual
 
 ---
@@ -56,7 +56,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/wwenderson/portainer/main/bo
    - Domínio base (ex: `seudominio.com`)
 2. Extrai o `RADICAL` do domínio para usar como nome padrão de base de dados
 3. Cria automaticamente uma `GLOBAL_SECRET` para uso seguro em todas as stacks
-4. Gera o arquivo `env.wanzeller` com as variáveis principais
+4. Gera o arquivo `~/wanzeller/env.wanzeller` com as variáveis principais
 5. Inicializa o Docker Swarm (`docker swarm init`)
 6. Cria as redes `traefik_public`, `agent_network` e `wanzeller_network`
 7. Realiza o deploy completo do Traefik (com HTTPS e painel)
@@ -82,13 +82,14 @@ Usando `${DOMAIN}`, `${RADICAL}`, `${USER_NAME}` e o secret `GLOBAL_SECRET` nas 
 ---
 
 ## 📁 Estrutura dos arquivos utilizados
+Todos os arquivos ficam organizados dentro da pasta `~/wanzeller`:
 
 - `bootstrap.sh` – script principal da instalação automatizada
 - `deploy.sh` – realiza o deploy do Portainer
 - `traefik.yaml` – configuração do Traefik com HTTPS via Let's Encrypt
 - `portainer.yaml` – configuração do Portainer + Agent com labels para Traefik
 - `stacks/mysql.yaml` – exemplo de stack adicional (MySQL + phpMyAdmin)
-- `env.wanzeller` – arquivo gerado com todas as variáveis
+- `.env.wanzeller` – arquivo gerado com todas as variáveis
 - `README.md` – este manual de instalação
 
 ---
