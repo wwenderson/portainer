@@ -11,12 +11,10 @@ if ! command -v envsubst >/dev/null 2>&1; then
   else
     echo "❌ Instalação automática falhou. Por favor, instale manualmente com:"
     echo "   sudo apt install gettext-base"
-    echo
-    echo "🛑 Após a instalação, execute novamente este comando:"
-    echo "   curl -sSL $REPO/bootstrap.sh | bash"
     exit 1
   fi
 
+  # Confirma instalação
   if ! command -v envsubst >/dev/null 2>&1; then
     echo "❌ Não foi possível instalar o 'envsubst'."
     exit 1
@@ -41,7 +39,7 @@ while true; do
   if [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
     break
   fi
-  echo "❌ E-mail inválido. Exemplo válido: seuemail@dominio.com"
+  echo "❌ E-mail inválido. Exemplo: seuemail@dominio.com"
   echo "   Para abortar, pressione CTRL+C."
 done
 
@@ -51,17 +49,17 @@ while true; do
   if [[ "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
     break
   fi
-  echo "❌ Domínio inválido. Exemplo válido: seudominio.com"
+  echo "❌ Domínio inválido. Exemplo: seudominio.com"
   echo "   Para abortar, pressione CTRL+C."
 done
 
-# 4) Extrai o radical do domínio (penúltimo segmento)
+# 4) Extrai o radical do domínio
 RADICAL=$(echo "$DOMAIN" | awk -F. '{print $(NF-1)}')
 
-# 5) Exporta variáveis para uso imediato
+# 5) Exporta variáveis
 export DOMAIN EMAIL USER_NAME RADICAL
 
-# 6) Persiste variáveis no bashrc (se ainda não estiverem)
+# 6) Persiste no ~/.bashrc
 if ! grep -q "export DOMAIN=" ~/.bashrc; then
   {
     echo "export DOMAIN=$DOMAIN"
@@ -69,10 +67,10 @@ if ! grep -q "export DOMAIN=" ~/.bashrc; then
     echo "export USER_NAME=$USER_NAME"
     echo "export RADICAL=$RADICAL"
   } >> ~/.bashrc
-  echo "✅ Variáveis DOMAIN, EMAIL, USER_NAME e RADICAL adicionadas ao ~/.bashrc"
+  echo "✅ Variáveis salvas em ~/.bashrc"
 fi
 
-# 7) Cria o secret GLOBAL_SECRET se necessário
+# 7) Cria secret GLOBAL_SECRET
 SECRET_NAME="GLOBAL_SECRET"
 if ! docker secret inspect "$SECRET_NAME" >/dev/null 2>&1; then
   GLOBAL_SECRET=$(openssl rand -base64 32)
@@ -81,19 +79,17 @@ else
   GLOBAL_SECRET="<secret já existe>"
 fi
 
-# 8) Exibe resumo
+# 8) Resumo e pausa
 echo
 echo "📝 Variáveis geradas:"
-echo "--------------------------------------------------"
 echo "DOMAIN        = $DOMAIN"
 echo "EMAIL         = $EMAIL"
 echo "USER_NAME     = $USER_NAME"
 echo "RADICAL       = $RADICAL"
 echo "GLOBAL_SECRET = $GLOBAL_SECRET"
-echo "--------------------------------------------------"
-read -p "⚠️  Copie essas informações e salve em local seguro. Pressione ENTER para continuar..."
+read -p "⚠️  Copie e guarde em local seguro. Pressione ENTER para continuar..."
 
-# 9) Salva arquivo auxiliar com variáveis
+# 9) Gera env.wanzeller
 cat > env.wanzeller <<EOF
 DOMAIN=$DOMAIN
 EMAIL=$EMAIL
@@ -101,21 +97,21 @@ USER_NAME=$USER_NAME
 RADICAL=$RADICAL
 GLOBAL_SECRET=$GLOBAL_SECRET
 EOF
-echo "✅ Arquivo 'env.wanzeller' criado com as variáveis."
+echo "✅ Arquivo 'env.wanzeller' criado."
 
-# 10) Cria redes Docker (se não existirem)
-docker swarm init >/dev/null 2>&1 || true
+# 10) Cria redes
+docker swarm init  >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable agent_network >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable wanzeller_network >/dev/null 2>&1 || true
 
-# 11) Prepara e sobe o Traefik
-echo "🚀 Deploy do Traefik..."
+# 11) Deploy Traefik
+echo "🚀 Deploy Traefik..."
 curl -sSL "$REPO/traefik.yaml" | envsubst '$EMAIL' > traefik.yaml
 docker stack deploy -c traefik.yaml traefik
 
-# 12) Prepara e sobe o Portainer
-echo "🚀 Deploy do Portainer..."
+# 12) Deploy Portainer
+echo "🚀 Deploy Portainer..."
 curl -sSL "$REPO/deploy.sh" -o deploy.sh
 chmod +x deploy.sh
 ./deploy.sh "$DOMAIN"
