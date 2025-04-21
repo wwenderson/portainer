@@ -10,42 +10,47 @@ Este projeto fornece uma instalação **automática e pronta para produção** d
 - Criação automática das redes overlay necessárias
 - Deploy completo do Traefik com HTTPS automático via Let's Encrypt
 - Deploy do Portainer com conexão ao agente distribuído
-- Configuração de domínio personalizada
-- Uso de e-mail para geração automática dos certificados TLS
+- Definição do domínio base (`seudominio.com`) usada em todas as stacks
+- Armazenamento seguro de uma `GLOBAL_SECRET` compartilhada via Docker Secret
 - Tudo controlado por script (`bootstrap.sh`) com interação mínima
+- Geração de arquivo `env.generated` com todas as variáveis importantes
+- Exibição em tela de todas as variáveis com pausa para cópia manual
 
 ---
 
 ## 📦 Requisitos
 
 1. Servidor com Docker instalado (versão 20.10 ou superior)
-2. Acesso root (ou permissão sudo) para gerenciamento de Docker
+2. Acesso root (ou permissão sudo) para gerenciamento do Docker
 3. DNS configurado com um A record apontando `portainer.seudominio.com` para o IP do servidor
 4. bash (Linux/macOS) ou WSL (Windows)
-5. envsubst (disponível via pacote `gettext`)
+5. `envsubst` (disponível via pacote `gettext`)
 
 ---
 
 ## 🚀 Instalação automática
 
-Substitua os valores abaixo pelo seu domínio e e-mail, e execute:
+Execute diretamente no terminal:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/wwenderson/portainer/main/bootstrap.sh | bash -s -- portainer.seudominio.com seu_email@dominio.com
+curl -sSL https://raw.githubusercontent.com/wwenderson/portainer/main/bootstrap.sh | bash
 ```
 
 ---
 
-## 🔧 O que acontece por trás
+## 🧭 O que este comando faz
 
-1. Inicializa o Docker Swarm (`docker swarm init`)
-2. Cria as redes overlay `traefik_public` e `agent_network` (se ainda não existirem)
-3. Baixa o arquivo `traefik.yaml` e insere o e-mail informado (para Let's Encrypt)
-4. Faz o deploy do Traefik com HTTPS, dashboard e redirecionamento HTTP → HTTPS
-5. Aguarda o Traefik estar disponível (`1/1 replicas`)
-6. Baixa o arquivo `portainer.yaml` e o script `deploy.sh`
-7. Executa o deploy do Portainer com o domínio fornecido
-8. Portainer é exposto automaticamente via Traefik com certificado válido
+1. Solicita:
+   - Usuário base
+   - E-mail principal
+   - Domínio base (ex: `seudominio.com`)
+2. Extrai o `RADICAL` do domínio para usar como nome padrão de base de dados
+3. Cria automaticamente uma `GLOBAL_SECRET` para uso seguro em todas as stacks
+4. Gera o arquivo `env.generated` com as variáveis principais
+5. Inicializa o Docker Swarm (`docker swarm init`)
+6. Cria as redes `traefik_public`, `agent_network` e `wanzeller_network`
+7. Realiza o deploy completo do Traefik (com HTTPS e painel)
+8. Realiza o deploy do Portainer já exposto em `portainer.${DOMAIN}` via Traefik
 
 ---
 
@@ -57,14 +62,23 @@ Após a conclusão, o Portainer estará disponível em:
 https://portainer.seudominio.com
 ```
 
+Você também poderá adicionar outras stacks com domínios como:
+
+- `https://mysql.seudominio.com`
+- `https://api.seudominio.com`
+
+Usando `${DOMAIN}`, `${RADICAL}`, `${USER_NAME}` e o secret `GLOBAL_SECRET` nas suas definições.
+
 ---
 
 ## 📁 Estrutura dos arquivos utilizados
 
-- `bootstrap.sh` – script principal de instalação automatizada
-- `deploy.sh` – usado internamente para aplicar o stack do Portainer
-- `traefik.yaml` – definição do serviço Traefik com suporte a TLS
-- `portainer.yaml` – definição do Portainer + Agent com labels para Traefik
+- `bootstrap.sh` – script principal da instalação automatizada
+- `deploy.sh` – realiza o deploy do Portainer
+- `traefik.yaml` – configuração do Traefik com HTTPS via Let's Encrypt
+- `portainer.yaml` – configuração do Portainer + Agent com labels para Traefik
+- `stacks/mysql.yaml` – exemplo de stack adicional (MySQL + phpMyAdmin)
+- `env.generated` – arquivo gerado com todas as variáveis (não requer source)
 - `README.md` – este manual de instalação
 
 ---
@@ -80,26 +94,32 @@ https://portainer.seudominio.com
 
 ## 🔐 Segurança
 
-- O Traefik é configurado para emitir e renovar automaticamente certificados TLS usando Let's Encrypt
-- O Portainer fica exposto apenas via HTTPS no domínio fornecido
-- O Docker Socket é acessado apenas pelos containers autorizados (Traefik e Portainer Agent)
+- O Traefik emite e renova automaticamente certificados TLS com Let's Encrypt
+- O acesso ao Portainer é exposto apenas via HTTPS, com domínio personalizado
+- O Docker Socket é exposto somente aos serviços autorizados (Traefik e Agent)
+- A senha gerada como `GLOBAL_SECRET` é única por instalação e usada em todas as stacks via Docker Secrets
 
 ---
 
-## ❓ Suporte
+## 📦 Importar stacks adicionais
 
-Caso tenha dúvidas ou precise de ajuda:
+Você pode importar novas stacks diretamente no Portainer via Git, usando:
 
-- Crie uma issue no repositório:  
-  https://github.com/wwenderson/portainer
+- **URL do repositório:** `https://github.com/wwenderson/portainer`
+- **Caminho do arquivo:** `stacks/mysql.yaml` (ou qualquer outro `.yaml`)
+- **Variáveis de ambiente esperadas:**
+  - `DOMAIN`
+  - `USER_NAME`
+  - `RADICAL`
 
 ---
 
 ## 👨‍💻 Autor
 
 **Wenderson Wanzeller**  
-Mestre em Engenharia de Inmformática 
-https://github.com/wwenderson
+Mestre em Engenharia de Informática  
+[www.wendersonwanzeller.com](https://www.wendersonwanzeller.com)  
+[https://github.com/wwenderson](https://github.com/wwenderson)
 
 ---
 
