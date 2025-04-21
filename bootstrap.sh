@@ -6,7 +6,6 @@ REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"
 # 🔍 Verifica se o 'envsubst' está instalado
 if ! command -v envsubst >/dev/null 2>&1; then
   echo "⚠️  O utilitário 'envsubst' não está instalado. Tentando instalar automaticamente..."
-
   if command -v apt >/dev/null 2>&1; then
     sudo apt update && sudo apt install -y gettext-base
   else
@@ -105,16 +104,18 @@ EOF
 echo "✅ Arquivo 'env.wanzeller' criado com as variáveis."
 
 # 10) Cria redes Docker (se não existirem)
-docker swarm init  >/dev/null 2>&1 || true
+docker swarm init >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable agent_network >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable wanzeller_network >/dev/null 2>&1 || true
 
 # 11) Prepara e sobe o Traefik
+echo "🚀 Deploy do Traefik..."
 curl -sSL "$REPO/traefik.yaml" | envsubst '$EMAIL' > traefik.yaml
 docker stack deploy -c traefik.yaml traefik
 
 # 12) Prepara e sobe o Portainer
+echo "🚀 Deploy do Portainer..."
 curl -sSL "$REPO/deploy.sh" -o deploy.sh
 chmod +x deploy.sh
 ./deploy.sh "$DOMAIN"
