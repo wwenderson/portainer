@@ -99,18 +99,30 @@ GLOBAL_SECRET=$GLOBAL_SECRET
 EOF
 echo "✅ Arquivo 'env.wanzeller' criado."
 
-# 10) Cria redes
-docker swarm init  >/dev/null 2>&1 || true
+# 10) Garante que o Swarm está ativo
+echo "🔧 Verificando Docker Swarm..."
+if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "active"; then
+  echo "⚠️  Swarm ainda não está ativo. Tentando inicializar..."
+  if ! sudo docker swarm init; then
+    echo "❌ Falha ao iniciar o Docker Swarm. Você pode tentar manualmente com:"
+    echo "   sudo docker swarm init"
+    exit 1
+  fi
+else
+  echo "✅ Docker Swarm já está ativo."
+fi
+
+# 11) Cria redes
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable agent_network >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable wanzeller_network >/dev/null 2>&1 || true
 
-# 11) Deploy Traefik
+# 12) Deploy Traefik
 echo "🚀 Deploy Traefik..."
 curl -sSL "$REPO/traefik.yaml" | envsubst '$EMAIL' > traefik.yaml
 docker stack deploy -c traefik.yaml traefik
 
-# 12) Deploy Portainer
+# 13) Deploy Portainer
 echo "🚀 Deploy Portainer..."
 curl -sSL "$REPO/deploy.sh" -o deploy.sh
 chmod +x deploy.sh
