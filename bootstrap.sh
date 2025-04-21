@@ -19,10 +19,10 @@ if ! command -v envsubst >/dev/null 2>&1; then
     exit 1
   fi
 
-  if ! command -v envsubst >/dev/null 2>&1; then
+  command -v envsubst >/dev/null 2>&1 || {
     echo "❌ Não foi possível instalar o 'envsubst'."
     exit 1
-  fi
+  }
 
   echo "✅ 'envsubst' instalado com sucesso!"
 fi
@@ -30,31 +30,22 @@ fi
 # 1) Lê nome de usuário base
 while true; do
   read -p "Informe o nome de usuário base (ex: wanzeller): " USER_NAME
-  if [[ "$USER_NAME" =~ ^[a-zA-Z0-9_]{3,}$ ]]; then
-    break
-  fi
+  [[ "$USER_NAME" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
   echo "❌ Nome de usuário inválido. Use apenas letras, números ou underline. Mínimo 3 caracteres."
-  echo "   Para abortar, pressione CTRL+C."
 done
 
 # 2) Lê e-mail principal
 while true; do
   read -p "Informe o e-mail principal do sistema (ex: voce@dominio.com): " EMAIL
-  if [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-    break
-  fi
+  [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
   echo "❌ E-mail inválido. Exemplo: seuemail@dominio.com"
-  echo "   Para abortar, pressione CTRL+C."
 done
 
 # 3) Lê domínio base
 while true; do
   read -p "Informe o domínio principal (ex: seudominio.com): " DOMAIN
-  if [[ "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-    break
-  fi
+  [[ "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
   echo "❌ Domínio inválido. Exemplo: seudominio.com"
-  echo "   Para abortar, pressione CTRL+C."
 done
 
 # 4) Extrai o radical do domínio
@@ -63,6 +54,7 @@ RADICAL=$(echo "$DOMAIN" | awk -F. '{print $(NF-1)}')
 # 5) Exporta variáveis
 export DOMAIN EMAIL USER_NAME RADICAL
 
+# 6) Salva no .bashrc se ainda não existir
 if ! grep -q "export DOMAIN=" ~/.bashrc; then
   {
     echo ""
@@ -85,7 +77,7 @@ else
   GLOBAL_SECRET="<secret já existe>"
 fi
 
-# 8) Resumo e pausa
+# 8) Resumo
 echo
 echo "📝 Variáveis geradas:"
 echo "DOMAIN        = $DOMAIN"
@@ -105,16 +97,16 @@ GLOBAL_SECRET=$GLOBAL_SECRET
 EOF
 echo "✅ Arquivo '.env.wanzeller' criado em $WORKDIR."
 
-# 10) Cria redes
+# 10) Cria redes necessárias
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable wanzeller_network >/dev/null 2>&1 || true
 
-# 11) Deploy Traefik
+# 11) Deploy do Traefik
 echo "🚀 Deploy Traefik..."
 curl -sSL "$REPO/traefik.yaml" | envsubst '$EMAIL' > "$WORKDIR/traefik.yaml"
 docker stack deploy -c "$WORKDIR/traefik.yaml" traefik
 
-# 12) Deploy Portainer
+# 12) Deploy do Portainer com variáveis carregadas
 echo "🚀 Deploy Portainer..."
 curl -sSL "$REPO/portainer.yaml" | envsubst '$DOMAIN' > "$WORKDIR/portainer.yaml"
 docker stack deploy -c "$WORKDIR/portainer.yaml" portainer
