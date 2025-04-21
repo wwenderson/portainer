@@ -2,6 +2,11 @@
 set -e
 
 REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"
+WORKDIR="$HOME/wanzeller"
+
+# 🗂️ Cria diretório de trabalho
+mkdir -p "$WORKDIR"
+cd "$WORKDIR"
 
 # 🔍 Verifica se o 'envsubst' está instalado
 if ! command -v envsubst >/dev/null 2>&1; then
@@ -14,7 +19,6 @@ if ! command -v envsubst >/dev/null 2>&1; then
     exit 1
   fi
 
-  # Confirma instalação
   if ! command -v envsubst >/dev/null 2>&1; then
     echo "❌ Não foi possível instalar o 'envsubst'."
     exit 1
@@ -90,14 +94,14 @@ echo "GLOBAL_SECRET = $GLOBAL_SECRET"
 read -p "⚠️  Copie e guarde em local seguro. Pressione ENTER para continuar..."
 
 # 9) Gera env.wanzeller
-cat > env.wanzeller <<EOF
+cat > "$WORKDIR/env.wanzeller" <<EOF
 DOMAIN=$DOMAIN
 EMAIL=$EMAIL
 USER_NAME=$USER_NAME
 RADICAL=$RADICAL
 GLOBAL_SECRET=$GLOBAL_SECRET
 EOF
-echo "✅ Arquivo 'env.wanzeller' criado."
+echo "✅ Arquivo 'env.wanzeller' criado em $WORKDIR."
 
 # 10) Cria redes
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true
@@ -106,11 +110,11 @@ docker network create --driver=overlay --attachable wanzeller_network >/dev/null
 
 # 11) Deploy Traefik
 echo "🚀 Deploy Traefik..."
-curl -sSL "$REPO/traefik.yaml" | envsubst '$EMAIL' > traefik.yaml
-docker stack deploy -c traefik.yaml traefik
+curl -sSL "$REPO/traefik.yaml" | envsubst '$EMAIL' > "$WORKDIR/traefik.yaml"
+docker stack deploy -c "$WORKDIR/traefik.yaml" traefik
 
 # 12) Deploy Portainer
 echo "🚀 Deploy Portainer..."
-curl -sSL "$REPO/deploy.sh" -o deploy.sh
-chmod +x deploy.sh
-./deploy.sh "$DOMAIN"
+curl -sSL "$REPO/deploy.sh" -o "$WORKDIR/deploy.sh"
+chmod +x "$WORKDIR/deploy.sh"
+"$WORKDIR/deploy.sh" "$DOMAIN"

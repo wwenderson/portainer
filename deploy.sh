@@ -10,6 +10,11 @@ fi
 
 # Define o repositório onde está o portainer.yaml
 REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"
+WORKDIR="$HOME/wanzeller"
+
+# Garante que o diretório existe
+mkdir -p "$WORKDIR"
+cd "$WORKDIR"
 
 # Exporta o domínio para o envsubst
 export DOMAIN
