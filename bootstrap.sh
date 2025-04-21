@@ -117,10 +117,5 @@ docker stack deploy -c "$WORKDIR/traefik.yaml" traefik
 
 # 12) Deploy Portainer
 echo "🚀 Deploy Portainer..."
-curl -sSL "$REPO/deploy.sh" -o "$WORKDIR/deploy.sh"
-chmod +x "$WORKDIR/deploy.sh"
-DOMAIN="$DOMAIN" \
-EMAIL="$EMAIL" \
-USER_NAME="$USER_NAME" \
-RADICAL="$RADICAL" \
-"$WORKDIR/deploy.sh"
+curl -sSL "$REPO/portainer.yaml" | envsubst '$DOMAIN' > "$WORKDIR/portainer.yaml"
+docker stack deploy -c "$WORKDIR/portainer.yaml" portainer
