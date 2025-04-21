@@ -1,8 +1,8 @@
-version: '3.2'
+version: "3.8"
 
 services:
   agent:
-    image: portainer/agent:lts
+    image: portainer/agent:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/volumes:/var/lib/docker/volumes
@@ -11,11 +11,15 @@ services:
     deploy:
       mode: global
       placement:
-        constraints: [node.platform.os == linux]
+        constraints: [ node.platform.os == linux ]
 
   portainer:
-    image: portainer/portainer-ce:lts
+    image: portainer/portainer-ce:latest
     command: -H tcp://tasks.agent:9001 --tlsskipverify
+    ports:
+      - "9443:9443"  # HTTPS (se configurado no Portainer)
+      - "9000:9000"  # Interface web padrão
+      - "8000:8000"  # API para comunicação com o agente
     volumes:
       - portainer_data:/data
     networks:
@@ -25,20 +29,20 @@ services:
       mode: replicated
       replicas: 1
       placement:
-        constraints: [node.role == manager]
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik_public
-      - traefik.http.routers.portainer.rule=Host(`portainer.wendersonwanzeller.com`)
-      - traefik.http.routers.portainer.entrypoints=websecure
-      - traefik.http.routers.portainer.tls.certresolver=le
-      - traefik.http.services.portainer.loadbalancer.server.port=9000
+        constraints: [ node.role == manager ]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik_public"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)"
+        - "traefik.http.routers.portainer.entrypoints=websecure"
+        - "traefik.http.routers.portainer.tls.certresolver=le"
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
 networks:
-  agent_network:
-    driver: overlay
-    attachable: true
   traefik_public:
+    external: true
+    attachable: true
+  agent_network:
     external: true
 
 volumes:
