@@ -6,31 +6,37 @@ Este projeto fornece uma instalação **automática e pronta para produção** d
 
 ## ✅ Funcionalidades
 
-- Instalação do Docker Swarm (caso ainda não esteja inicializado)
 - Criação automática das redes overlay necessárias
 - Deploy completo do Traefik com HTTPS automático via Let's Encrypt
 - Deploy do Portainer com conexão ao agente distribuído
 - Definição do domínio base (`seudominio.com`) usada em todas as stacks
 - Armazenamento seguro de uma `GLOBAL_SECRET` compartilhada via Docker Secret
 - Tudo controlado por script (`bootstrap.sh`) com interação mínima
-- Geração de arquivo `env.generated` com todas as variáveis importantes
+- Geração de arquivo `env.wanzeller` com todas as variáveis importantes
 - Exibição em tela de todas as variáveis com pausa para cópia manual
 
 ---
 
 ## 📦 Requisitos
 
-1. Servidor com Docker instalado (versão 20.10 ou superior)  
-   ℹ️ O script inicializará o Docker Swarm automaticamente caso ainda não esteja ativo.  
-   ❗ Se o nó já estiver em um Swarm como *worker*, você precisará sair manualmente com:
+1. Servidor com Docker instalado (versão 20.10 ou superior)
+2. Docker Swarm ativado (modo manager) – veja instruções abaixo
+3. Acesso root (ou permissão sudo) para gerenciamento do Docker
+4. DNS configurado com um A record apontando `portainer.seudominio.com` para o IP do servidor
+5. bash (Linux/macOS) ou WSL (Windows)
+6. `envsubst` (disponível via pacote `gettext`)
 
-   ```bash
-   sudo docker swarm leave --force
-   ```
-2. Acesso root (ou permissão sudo) para gerenciamento do Docker
-3. DNS configurado com um A record apontando `portainer.seudominio.com` para o IP do servidor
-4. bash (Linux/macOS) ou WSL (Windows)
-5. `envsubst` (disponível via pacote `gettext`)
+---
+
+## ⚙️ Ativação do Docker Swarm
+
+Antes de executar a instalação, o Docker Swarm deve estar ativado no servidor.
+
+Se o Swarm ainda não estiver ativo, execute o comando abaixo **no terminal**:
+
+```bash
+docker swarm init
+```
 
 ---
 
@@ -50,7 +56,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/wwenderson/portainer/main/bo
    - Domínio base (ex: `seudominio.com`)
 2. Extrai o `RADICAL` do domínio para usar como nome padrão de base de dados
 3. Cria automaticamente uma `GLOBAL_SECRET` para uso seguro em todas as stacks
-4. Gera o arquivo `env.generated` com as variáveis principais
+4. Gera o arquivo `env.wanzeller` com as variáveis principais
 5. Inicializa o Docker Swarm (`docker swarm init`)
 6. Cria as redes `traefik_public`, `agent_network` e `wanzeller_network`
 7. Realiza o deploy completo do Traefik (com HTTPS e painel)
@@ -69,7 +75,7 @@ https://portainer.seudominio.com
 Você também poderá adicionar outras stacks com domínios como:
 
 - `https://mysql.seudominio.com`
-- `https://api.seudominio.com`
+- `https://phpmyadmin.seudominio.com`
 
 Usando `${DOMAIN}`, `${RADICAL}`, `${USER_NAME}` e o secret `GLOBAL_SECRET` nas suas definições.
 
@@ -82,7 +88,7 @@ Usando `${DOMAIN}`, `${RADICAL}`, `${USER_NAME}` e o secret `GLOBAL_SECRET` nas 
 - `traefik.yaml` – configuração do Traefik com HTTPS via Let's Encrypt
 - `portainer.yaml` – configuração do Portainer + Agent com labels para Traefik
 - `stacks/mysql.yaml` – exemplo de stack adicional (MySQL + phpMyAdmin)
-- `env.generated` – arquivo gerado com todas as variáveis (não requer source)
+- `env.wanzeller` – arquivo gerado com todas as variáveis
 - `README.md` – este manual de instalação
 
 ---
