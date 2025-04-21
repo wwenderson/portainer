@@ -33,10 +33,8 @@ Este projeto fornece uma instalação **automática e pronta para produção** d
 Execute diretamente no terminal:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/wwenderson/portainer/main/bootstrap.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/wwenderson/portainer/main/bootstrap.sh)
 ```
-
----
 
 ## 🧭 O que este comando faz
 
@@ -127,5 +125,3 @@ Mestre em Engenharia de Informática
 
 Este projeto é livre, gratuito e de código aberto.  
 Você pode reutilizar, modificar e redistribuir, desde que **mantenha os créditos ao autor**.
-
----
