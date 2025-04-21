@@ -12,7 +12,7 @@ services:
       - --providers.docker.network=traefik_public
       - --providers.docker.endpoint=unix:///var/run/docker.sock
       - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.le.acme.email=${TRAEFIK_EMAIL}
+      - --certificatesresolvers.le.acme.email=${EMAIL}
       - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https

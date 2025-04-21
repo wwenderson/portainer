@@ -3,11 +3,13 @@ set -e
 
 DOMAIN=$1
 if [ -z "$DOMAIN" ]; then
-  echo "Usage: deploy.sh <PORTAINER_DOMAIN>"
+  echo "Uso: deploy.sh <DOMÍNIO>"
+  echo "Exemplo: ./deploy.sh seudominio.com"
   exit 1
 fi
 
-export PORTAINER_DOMAIN=$DOMAIN
+# Exporta o domínio para o envsubst
+export DOMAIN
 
-envsubst < portainer.yaml > portainer-compose.yml
-docker stack deploy -c portainer-compose.yml portainer
+# Substitui a variável DOMAIN e já envia o resultado para o docker
+envsubst '$DOMAIN' < portainer.yaml | docker stack deploy -c - portainer
