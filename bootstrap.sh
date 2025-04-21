@@ -76,11 +76,6 @@ if ! grep -q "export DOMAIN=" ~/.bashrc; then
   echo "✅ Variáveis salvas em ~/.bashrc"
 fi
 
-# ⚠️ Carrega sessão atual com variáveis de ambiente, independente do if
-set -a
-source "$HOME/.bashrc"
-set +a
-
 # 7) Cria secret GLOBAL_SECRET
 SECRET_NAME="GLOBAL_SECRET"
 if ! docker secret inspect "$SECRET_NAME" >/dev/null 2>&1; then
@@ -124,4 +119,8 @@ docker stack deploy -c "$WORKDIR/traefik.yaml" traefik
 echo "🚀 Deploy Portainer..."
 curl -sSL "$REPO/deploy.sh" -o "$WORKDIR/deploy.sh"
 chmod +x "$WORKDIR/deploy.sh"
-"$WORKDIR/deploy.sh" "$DOMAIN"
+DOMAIN="$DOMAIN" \
+EMAIL="$EMAIL" \
+USER_NAME="$USER_NAME" \
+RADICAL="$RADICAL" \
+"$WORKDIR/deploy.sh"

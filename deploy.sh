@@ -1,25 +1,23 @@
 #!/bin/bash
 set -e
 
-DOMAIN=$1
+# Verifica se a variável DOMAIN foi passada corretamente
 if [ -z "$DOMAIN" ]; then
-  echo "Uso: deploy.sh <DOMÍNIO>"
-  echo "Exemplo: ./deploy.sh seudominio.com"
+  echo "❌ Erro: variável DOMAIN não encontrada no ambiente."
   exit 1
 fi
 
-# Define o repositório onde está o portainer.yaml
+# Exporta todas as variáveis necessárias para o envsubst
+export DOMAIN EMAIL USER_NAME RADICAL
+
+# Define o repositório e diretório de trabalho
 REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"
 WORKDIR="$HOME/wanzeller"
 
-# Garante que o diretório existe
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 
-# Exporta o domínio para o envsubst
-export DOMAIN
-
-# Baixa o portainer.yaml
+# Baixa o arquivo portainer.yaml
 echo "🔽 Baixando portainer.yaml do repositório..."
 curl -fsSL "$REPO/portainer.yaml" -o portainer.yaml
 
@@ -29,6 +27,6 @@ if [ ! -s portainer.yaml ]; then
   exit 1
 fi
 
-# Substitui a variável DOMAIN e envia para o docker stack deploy
+# Substitui todas as variáveis e faz o deploy
 echo "🚀 Fazendo deploy do Portainer..."
-envsubst '$DOMAIN' < portainer.yaml | docker stack deploy -c - portainer
+envsubst < portainer.yaml | docker stack deploy -c - portainer
