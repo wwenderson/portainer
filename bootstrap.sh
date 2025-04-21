@@ -74,6 +74,11 @@ if ! grep -q "export DOMAIN=" ~/.bashrc; then
   echo "✅ Variáveis salvas em ~/.bashrc"
 fi
 
+# ⚠️ Carrega sessão atual com variáveis de ambiente, independente do if
+set -a
+source "$HOME/.bashrc"
+set +a
+
 # 7) Cria secret GLOBAL_SECRET
 SECRET_NAME="GLOBAL_SECRET"
 if ! docker secret inspect "$SECRET_NAME" >/dev/null 2>&1; then
