@@ -101,13 +101,16 @@ echo "✅ Arquivo 'env.wanzeller' criado."
 
 # 10) Garante que o Swarm está ativo
 echo "🔧 Verificando Docker Swarm..."
-if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -q "active"; then
+SWARM_STATE=$(docker info --format '{{.Swarm.LocalNodeState}}')
+
+if [ "$SWARM_STATE" != "active" ]; then
   echo "⚠️  Swarm ainda não está ativo. Tentando inicializar..."
-  if ! sudo docker swarm init; then
-    echo "❌ Falha ao iniciar o Docker Swarm. Você pode tentar manualmente com:"
-    echo "   sudo docker swarm init"
+  INIT_OUTPUT=$(sudo docker swarm init 2>&1) || {
+    echo "❌ Falha ao iniciar o Docker Swarm:"
+    echo "$INIT_OUTPUT"
     exit 1
-  fi
+  }
+  echo "✅ Docker Swarm iniciado com sucesso!"
 else
   echo "✅ Docker Swarm já está ativo."
 fi

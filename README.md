@@ -20,7 +20,13 @@ Este projeto fornece uma instalação **automática e pronta para produção** d
 
 ## 📦 Requisitos
 
-1. Servidor com Docker instalado (versão 20.10 ou superior)
+1. Servidor com Docker instalado (versão 20.10 ou superior)  
+   ℹ️ O script inicializará o Docker Swarm automaticamente caso ainda não esteja ativo.  
+   ❗ Se o nó já estiver em um Swarm como *worker*, você precisará sair manualmente com:
+
+   ```bash
+   sudo docker swarm leave --force
+   ```
 2. Acesso root (ou permissão sudo) para gerenciamento do Docker
 3. DNS configurado com um A record apontando `portainer.seudominio.com` para o IP do servidor
 4. bash (Linux/macOS) ou WSL (Windows)
