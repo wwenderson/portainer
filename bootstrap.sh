@@ -107,7 +107,6 @@ echo "✅ Arquivo '.env.wanzeller' criado em $WORKDIR."
 
 # 10) Cria redes
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true
-docker network create --driver=overlay --attachable agent_network >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable wanzeller_network >/dev/null 2>&1 || true
 
 # 11) Deploy Traefik
