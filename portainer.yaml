@@ -33,7 +33,7 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=traefik_public"
-        - "traefik.http.routers.portainer.rule=Host(`portainer.wendersonwanzeller.com`)"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN}`)"
         - "traefik.http.routers.portainer.entrypoints=websecure"
         - "traefik.http.routers.portainer.tls.certresolver=le"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"

@@ -1,74 +1,62 @@
 #!/bin/bash
+
+# Ativa modo de erro para interromper execução caso qualquer comando falhe
 set -e
 
+# Configurações básicas do repositório e diretório de trabalho
 REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"
 WORKDIR="$HOME/wanzeller"
 
-# 🗂️ Cria diretório de trabalho
+# Criação do diretório de trabalho
 mkdir -p "$WORKDIR"
 cd "$WORKDIR"
 
-# 🔍 Verifica se o 'envsubst' está instalado
+# Verifica e instala 'envsubst' se necessário
 if ! command -v envsubst >/dev/null 2>&1; then
-  echo "⚠️  O utilitário 'envsubst' não está instalado. Tentando instalar automaticamente..."
+  echo "O utilitário 'envsubst' não foi encontrado. Tentando instalar automaticamente..."
   if command -v apt >/dev/null 2>&1; then
     sudo apt update && sudo apt install -y gettext-base
   else
-    echo "❌ Instalação automática falhou. Por favor, instale manualmente com:"
-    echo "   sudo apt install gettext-base"
+    echo "Falha ao instalar automaticamente. Instale manualmente com: sudo apt install gettext-base"
     exit 1
   fi
 
   command -v envsubst >/dev/null 2>&1 || {
-    echo "❌ Não foi possível instalar o 'envsubst'."
+    echo "Falha ao instalar 'envsubst'."
     exit 1
   }
 
-  echo "✅ 'envsubst' instalado com sucesso!"
+  echo "'envsubst' instalado com sucesso."
 fi
 
-# 1) Lê nome de usuário base
+# Solicita ao usuário o nome base para uso no sistema
 while true; do
   read -p "Informe o nome de usuário base (ex: wanzeller): " USER_NAME
   [[ "$USER_NAME" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
-  echo "❌ Nome de usuário inválido. Use apenas letras, números ou underline. Mínimo 3 caracteres."
+  echo "Nome inválido. Apenas letras, números e underline. Mínimo 3 caracteres."
 done
 
-# 2) Lê e-mail principal
+# Solicita e-mail principal do sistema
 while true; do
   read -p "Informe o e-mail principal do sistema (ex: voce@dominio.com): " EMAIL
   [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
-  echo "❌ E-mail inválido. Exemplo: seuemail@dominio.com"
+  echo "E-mail inválido. Formato correto: usuario@dominio.com"
 done
 
-# 3) Lê domínio base
+# Solicita o domínio principal
 while true; do
   read -p "Informe o domínio principal (ex: seudominio.com): " DOMAIN
   [[ "$DOMAIN" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
-  echo "❌ Domínio inválido. Exemplo: seudominio.com"
+  echo "Domínio inválido. Formato correto: dominio.com"
 done
 
-# 4) Extrai o radical do domínio
+# Extrai radical (parte principal) do domínio
 RADICAL=$(echo "$DOMAIN" | awk -F. '{print $(NF-1)}')
 
-# 5) Exporta variáveis
+# Exporta variáveis para ambiente
 export DOMAIN EMAIL USER_NAME RADICAL
 
-# 6) Salva no .bashrc se ainda não existir
-if ! grep -q "export DOMAIN=" ~/.bashrc; then
-  {
-    echo ""
-    echo "# >>> Variáveis do instalador Portainer + Traefik (bootstrap.sh)"
-    echo "export DOMAIN=$DOMAIN"
-    echo "export EMAIL=$EMAIL"
-    echo "export USER_NAME=$USER_NAME"
-    echo "export RADICAL=$RADICAL"
-    echo "# <<< Fim das variáveis do instalador, by Wanzeller"
-  } >> ~/.bashrc
-  echo "✅ Variáveis salvas em ~/.bashrc"
-fi
-
-# 7) Cria secret GLOBAL_SECRET
+# Criação segura do secret GLOBAL_SECRET no Docker
 SECRET_NAME="GLOBAL_SECRET"
 if ! docker secret inspect "$SECRET_NAME" >/dev/null 2>&1; then
   GLOBAL_SECRET=$(openssl rand -base64 32)
@@ -77,36 +65,48 @@ else
   GLOBAL_SECRET="<secret já existe>"
 fi
 
-# 8) Resumo
-echo
-echo "📝 Variáveis geradas:"
-echo "DOMAIN        = $DOMAIN"
-echo "EMAIL         = $EMAIL"
-echo "USER_NAME     = $USER_NAME"
-echo "RADICAL       = $RADICAL"
-echo "GLOBAL_SECRET = $GLOBAL_SECRET"
-read -p "⚠️  Copie e guarde em local seguro. Pressione ENTER para continuar..."
+# Exibe resumo das variáveis configuradas
+cat <<EOF
+Variáveis configuradas:
+  DOMAIN        = $DOMAIN
+  EMAIL         = $EMAIL
+  USER_NAME     = $USER_NAME
+  RADICAL       = $RADICAL
+  GLOBAL_SECRET = $GLOBAL_SECRET
+EOF
+read -p "Copie e guarde essas variáveis em local seguro. Pressione ENTER para continuar..."
 
-# 9) Gera env.wanzeller
-cat > "$WORKDIR/.env.wanzeller" <<EOF
+# Cria arquivo de variáveis de ambiente
+cat > "$WORKDIR/.wanzeller.env" <<EOF
 DOMAIN=$DOMAIN
 EMAIL=$EMAIL
 USER_NAME=$USER_NAME
 RADICAL=$RADICAL
 GLOBAL_SECRET=$GLOBAL_SECRET
 EOF
-echo "✅ Arquivo '.env.wanzeller' criado em $WORKDIR."
+echo "Arquivo '.wanzeller.env' criado em $WORKDIR."
 
-# 10) Cria redes necessárias
+# Garante carregamento automático das variáveis no bash
+if ! grep -q 'source "$HOME/wanzeller/.wanzeller.env"' "$HOME/.bashrc"; then
+  echo '[ -f "$HOME/wanzeller/.wanzeller.env" ] && source "$HOME/wanzeller/.wanzeller.env"' >> "$HOME/.bashrc"
+  echo "Inclusão automática das variáveis configurada no '.bashrc'."
+fi
+
+# Carrega variáveis imediatamente
+set -a
+source "$WORKDIR/.wanzeller.env"
+set +a
+
+# Criação das redes Docker necessárias (overlay)
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable wanzeller_network >/dev/null 2>&1 || true
 
-# 11) Deploy do Traefik
-echo "🚀 Deploy Traefik..."
-curl -sSL "$REPO/traefik.yaml" | envsubst '$EMAIL' > "$WORKDIR/traefik.yaml"
-docker stack deploy -c "$WORKDIR/traefik.yaml" traefik
+# Deploy do Traefik
+curl -sSL "$REPO/traefik.yaml" -o "$WORKDIR/traefik.yaml"
+envsubst < "$WORKDIR/traefik.yaml" < "$WORKDIR/.wanzeller.env" > "$WORKDIR/traefik.rendered.yaml"
+docker stack deploy -c "$WORKDIR/traefik.rendered.yaml" traefik
 
-# 12) Deploy do Portainer com variáveis carregadas
-echo "🚀 Deploy Portainer..."
-curl -sSL "$REPO/portainer.yaml" | envsubst '$DOMAIN' > "$WORKDIR/portainer.yaml"
-docker stack deploy -c "$WORKDIR/portainer.yaml" portainer  
+# Deploy do Portainer
+curl -sSL "$REPO/portainer.yaml" -o "$WORKDIR/portainer.yaml"
+envsubst < "$WORKDIR/portainer.yaml" < "$WORKDIR/.wanzeller.env" > "$WORKDIR/portainer.rendered.yaml"
+docker stack deploy -c "$WORKDIR/portainer.rendered.yaml" portainer
