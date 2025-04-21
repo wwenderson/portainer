@@ -54,7 +54,7 @@ RADICAL=$(echo "$DOMAIN" | awk -F. '{print $(NF-1)}')
 # 5) Exporta variáveis
 export DOMAIN EMAIL USER_NAME RADICAL
 
-# 7) Cria secret GLOBAL_SECRET
+# 6) Cria secret GLOBAL_SECRET
 SECRET_NAME="GLOBAL_SECRET"
 if ! docker secret inspect "$SECRET_NAME" >/dev/null 2>&1; then
   GLOBAL_SECRET=$(openssl rand -base64 32)
@@ -63,7 +63,7 @@ else
   GLOBAL_SECRET="<secret já existe>"
 fi
 
-# 8) Resumo
+# 7) Resumo
 echo
 echo "📝 Variáveis geradas:"
 echo "DOMAIN        = $DOMAIN"
@@ -73,8 +73,7 @@ echo "RADICAL       = $RADICAL"
 echo "GLOBAL_SECRET = $GLOBAL_SECRET"
 read -p "⚠️  Copie e guarde em local seguro. Pressione ENTER para continuar..."
 
-
-# 9) Gera wanzeller.env
+# 8) Cria arquivo de variáveis de ambiente
 cat > "$WORKDIR/.wanzeller.env" <<EOF
 DOMAIN=$DOMAIN
 EMAIL=$EMAIL
@@ -82,31 +81,29 @@ USER_NAME=$USER_NAME
 RADICAL=$RADICAL
 GLOBAL_SECRET=$GLOBAL_SECRET
 EOF
-echo "✅ Arquivo '.wanzeller.env' criado em $WORKDIR."
+echo "Arquivo '.wanzeller.env' criado em $WORKDIR."
 
-# 9.1) Garante que o .wanzeller.env será carregado no bashrc
+# Garante carregamento automático das variáveis no bash
 if ! grep -q 'source "$HOME/wanzeller/.wanzeller.env"' "$HOME/.bashrc"; then
   echo '[ -f "$HOME/wanzeller/.wanzeller.env" ] && source "$HOME/wanzeller/.wanzeller.env"' >> "$HOME/.bashrc"
-  echo "✅ Link para '.wanzeller.env' adicionado ao .bashrc"
+  echo "Inclusão automática das variáveis configurada no '.bashrc'."
 fi
 
-# 9.2) Carrega as variáveis agora mesmo
+# Carrega variáveis imediatamente
 set -a
 source "$WORKDIR/.wanzeller.env"
 set +a
 
-# 10) Cria redes necessárias
+# 9) Cria redes necessárias
 docker network create --driver=overlay --attachable traefik_public >/dev/null 2>&1 || true
 docker network create --driver=overlay --attachable wanzeller_network >/dev/null 2>&1 || true
 
-# 11) Deploy do Traefik
+# 10) Deploy do Traefik
 echo "🚀 Deploy Traefik..."
-curl -sSL "$REPO/traefik.yaml" -o "$WORKDIR/traefik.yaml"
-envsubst < "$WORKDIR/traefik.yaml" < "$WORKDIR/.wanzeller.env" > "$WORKDIR/traefik.rendered.yaml"
-docker stack deploy -c "$WORKDIR/traefik.rendered.yaml" traefik
+curl -sSL "$REPO/traefik.yaml" | envsubst > "$WORKDIR/traefik.yaml"
+docker stack deploy -c "$WORKDIR/traefik.yaml" traefik
 
-# 12) Deploy do Portainer com variáveis carregadas
+# 11) Deploy do Portainer com variáveis carregadas
 echo "🚀 Deploy Portainer..."
-curl -sSL "$REPO/portainer.yaml" -o "$WORKDIR/portainer.yaml"
-envsubst < "$WORKDIR/portainer.yaml" < "$WORKDIR/.wanzeller.env" > "$WORKDIR/portainer.rendered.yaml"
-docker stack deploy -c "$WORKDIR/portainer.rendered.yaml" portainer
+curl -sSL "$REPO/portainer.yaml" | envsubst > "$WORKDIR/portainer.yaml"
+docker stack deploy -c "$WORKDIR/portainer.yaml" portainer
