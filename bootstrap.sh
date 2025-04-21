@@ -63,13 +63,15 @@ RADICAL=$(echo "$DOMAIN" | awk -F. '{print $(NF-1)}')
 # 5) Exporta variáveis
 export DOMAIN EMAIL USER_NAME RADICAL
 
-# 6) Persiste no ~/.bashrc
 if ! grep -q "export DOMAIN=" ~/.bashrc; then
   {
+    echo ""
+    echo "# >>> Variáveis do instalador Portainer + Traefik (bootstrap.sh)"
     echo "export DOMAIN=$DOMAIN"
     echo "export EMAIL=$EMAIL"
     echo "export USER_NAME=$USER_NAME"
     echo "export RADICAL=$RADICAL"
+    echo "# <<< Fim das variáveis do instalador, by Wanzeller"
   } >> ~/.bashrc
   echo "✅ Variáveis salvas em ~/.bashrc"
 fi
