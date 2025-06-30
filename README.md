@@ -45,7 +45,7 @@ docker swarm init
 Execute diretamente no terminal:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/wwenderson/portainer/main/bootstrap.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/wwenderson/portainer/main/wanzeller.sh)
 ```
 
 ## 🧭 O que este comando faz
