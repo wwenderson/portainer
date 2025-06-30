@@ -64,18 +64,14 @@ while true; do
   echo "Nome do banco inválido."
 done
 
-# Extrair radical do domínio
-RADICAL=$(echo "$DOMINIO" | awk -F. '{print $(NF-1)}')
-
 # Exportar variáveis para envsubst
-export DOMINIO EMAIL USUARIO RADICAL POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
+export DOMINIO EMAIL USUARIO POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
 
 # Gerar arquivo de ambiente
 cat > "$WORKDIR/stack/.wanzeller.env" <<EOF
 DOMINIO=$DOMINIO
 EMAIL=$EMAIL
 USUARIO=$USUARIO
-RADICAL=$RADICAL
 POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=$POSTGRES_DB
