@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - wanzeller_network
+      - traefik_public
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik_public"
+        - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.${DOMINIO}`)"
+        - "traefik.http.routers.pgadmin.entrypoints=websecure"
+        - "traefik.http.routers.pgadmin.tls.certresolver=le"
+        - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+
+volumes:
+  pgadmin_data:
+    driver: local
+
+networks:
+  wanzeller_network:
+    external: true
+  traefik_public:
+    external: true

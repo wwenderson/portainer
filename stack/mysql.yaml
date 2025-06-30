@@ -13,12 +13,14 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/GLOBAL_SECRET
-      MYSQL_DATABASE: ${RADICAL}
-      MYSQL_USER: ${USER_NAME}
-      MYSQL_PASSWORD_FILE: /run/secrets/GLOBAL_SECRET
+      MYSQL_DATABASE_FILE: /run/secrets/RADICAL
+      MYSQL_USER_FILE: /run/secrets/USUARIO
+      MYSQL_PASSWORD_FILE: /run/secrets/SENHA
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/SENHA
     secrets:
-      - GLOBAL_SECRET
+      - RADICAL
+      - USUARIO
+      - SENHA
     deploy:
       mode: replicated
       replicas: 1
@@ -35,7 +37,11 @@ volumes:
     external: true
 
 secrets:
-  GLOBAL_SECRET:
+  RADICAL:
+    external: true
+  USUARIO:
+    external: true
+  SENHA:
     external: true
 
 networks:
