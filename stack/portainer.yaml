@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   agent:
     image: portainer/agent:latest
@@ -9,16 +11,15 @@ services:
     deploy:
       mode: global
       placement:
-        constraints:
-          - node.platform.os == linux
+        constraints: [ node.platform.os == linux ]
 
   portainer:
     image: portainer/portainer-ce:latest
     command: -H tcp://tasks.agent:9001 --tlsskipverify
     ports:
-      - "9443:9443"  # HTTPS (se configurado)
-      - "9000:9000"  # UI web do Portainer
-      - "8000:8000"  # Comunicação com o agente
+      - "9443:9443"  # HTTPS (se configurado no Portainer)
+      - "9000:9000"  # Interface web padrão
+      - "8000:8000"  # API para comunicação com o agente
     volumes:
       - portainer_data:/data
     networks:
@@ -28,8 +29,7 @@ services:
       mode: replicated
       replicas: 1
       placement:
-        constraints:
-          - node.role == manager
+        constraints: [ node.role == manager ]
       labels:
         - "traefik.enable=true"
         - "traefik.docker.network=traefik_public"
@@ -38,13 +38,13 @@ services:
         - "traefik.http.routers.portainer.tls.certresolver=le"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
-volumes:
-  portainer_data:
-    external: true
-
 networks:
   traefik_public:
     external: true
     attachable: true
   agent_network:
+    external: true
+
+volumes:
+  portainer_data:
     external: true

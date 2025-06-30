@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   traefik:
     image: traefik:v2.11
@@ -41,5 +43,4 @@ volumes:
 
 networks:
   traefik_public:
-    external: true
-      
+    external: true  
