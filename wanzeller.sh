@@ -1,89 +1,82 @@
 #!/bin/bash
 set -e
+umask 077
+trap 'echo "Script interrompido."; exit 1' INT
 
 REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"
 WORKDIR="$HOME/wanzeller"
 
-# Verifica dependências
-echo "🔎 Verificando dependências necessárias..."
-for cmd in docker openssl awk curl grep; do
+# Verificar dependências
+for cmd in docker openssl awk curl grep envsubst; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "❌ A dependência '$cmd' não foi encontrada. Por favor, instale antes de continuar."
+    echo "Dependência '$cmd' não encontrada. Instale antes de continuar."
     exit 1
   fi
 done
-echo "✅ Todas as dependências estão instaladas."
 
-# Cria diretório de trabalho
+# Criar diretório de trabalho
 mkdir -p "$WORKDIR/stack"
 cd "$WORKDIR"
 
-# Inicializa Swarm (se necessário)
+# Inicializar Docker Swarm (se necessário)
 if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw active; then
-  echo "Inicializando Docker Swarm..."
   docker swarm init
-else
-  echo "Docker Swarm já está ativo."
 fi
 
-# Lê nome de usuário base
+# Ler nome de usuário base
 while true; do
   read -p "Informe o nome de usuário base (ex: wanzeller): " USUARIO
   [[ "$USUARIO" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
-  echo "❌ Nome de usuário inválido. Use apenas letras, números ou underline. Mínimo 3 caracteres."
+  echo "Nome de usuário inválido. Mínimo 3 caracteres alfanuméricos ou underline."
 done
 
-# Lê e-mail principal
+# Ler e-mail principal
 while true; do
-  read -p "Informe o e-mail principal do sistema (ex: voce@dominio.com): " EMAIL
+  read -p "Informe o e-mail principal (ex: voce@dominio.com): " EMAIL
   [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
-  echo "❌ E-mail inválido. Exemplo: seuemail@dominio.com"
+  echo "E-mail inválido."
 done
 
-# Lê domínio base
+# Ler domínio base
 while true; do
   read -p "Informe o domínio principal (ex: seudominio.com): " DOMINIO
   [[ "$DOMINIO" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
-  echo "❌ Domínio inválido. Exemplo: seudominio.com"
+  echo "Domínio inválido."
 done
 
-# Lê variáveis do Postgres
+# Ler variáveis do Postgres
 while true; do
   read -p "Informe o usuário do Postgres (ex: admin): " POSTGRES_USER
   [[ "$POSTGRES_USER" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
-  echo "❌ Usuário inválido. Use apenas letras, números ou underline. Mínimo 3 caracteres."
+  echo "Usuário do Postgres inválido."
 done
 
 while true; do
   read -s -p "Informe a senha do Postgres: " POSTGRES_PASSWORD
   echo
   [[ -n "$POSTGRES_PASSWORD" ]] && break
-  echo "❌ Senha não pode ser vazia."
+  echo "Senha não pode ser vazia."
 done
 
 while true; do
-  read -p "Informe o nome do banco de dados principal do Postgres: " POSTGRES_DB
+  read -p "Informe o nome do banco de dados (ex: banco): " POSTGRES_DB
   [[ "$POSTGRES_DB" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
-  echo "❌ Nome de banco inválido. Use apenas letras, números ou underline. Mínimo 3 caracteres."
+  echo "Nome do banco inválido."
 done
 
-# Extrai radical do domínio
+# Extrair radical do domínio
 RADICAL=$(echo "$DOMINIO" | awk -F. '{print $(NF-1)}')
 
-# Exporta variáveis
+# Exportar variáveis para envsubst
 export DOMINIO EMAIL USUARIO RADICAL POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
 
-# Cria secret GLOBAL_SECRET
+# Criar secret GLOBAL_SECRET
 SECRET_NAME="GLOBAL_SECRET"
-if ! docker secret inspect "$SECRET_NAME" >/dev/null 2>&1; then
-  GLOBAL_SECRET=$(openssl rand -base64 32)
-  echo "$GLOBAL_SECRET" | docker secret create "$SECRET_NAME" -
-  echo "Secret '$SECRET_NAME' criado."
-else
-  echo "Secret '$SECRET_NAME' já existe."
+if ! docker secret inspect "$SECRET_NAME" &>/dev/null; then
+  openssl rand -base64 32 | docker secret create "$SECRET_NAME" -
 fi
 
-# Cria arquivo de variáveis de ambiente
+# Gerar arquivo de ambiente
 cat > "$WORKDIR/stack/.wanzeller.env" <<EOF
 DOMINIO=$DOMINIO
 EMAIL=$EMAIL
@@ -93,32 +86,23 @@ POSTGRES_USER=$POSTGRES_USER
 POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=$POSTGRES_DB
 EOF
-echo "Arquivo '.wanzeller.env' criado em $WORKDIR/stack."
 
-# Cria redes necessárias
-for net in traefik_public wanzeller_network; do
-  if ! docker network inspect "$net" >/dev/null 2>&1; then
-    docker network create --driver=overlay --attachable "$net"
-    echo "Rede '$net' criada."
-  else
-    echo "Rede '$net' já existe."
-  fi
+# Criar redes overlay necessárias
+for net in traefik_public agent_network wanzeller_network; do
+  docker network inspect "$net" &>/dev/null || \
+    docker network create --driver overlay --attachable "$net"
 done
 
-# Cria as redes overlay
-docker network create --driver=overlay --attachable traefik_public    &>/dev/null || true
-docker network create --driver=overlay --attachable agent_network     &>/dev/null || true
-docker network create --driver=overlay --attachable wanzeller_network &>/dev/null || true
-
-# Baixa e faz deploy dos stacks
+# Baixar arquivos YAML atualizados do repositório
 for stack in traefik portainer postgres pgadmin; do
-  echo "⬇️ Baixando configuração do $stack..."
-  curl -sSL "$REPO/stack/$stack.yaml" -o "$WORKDIR/stack/$stack.yaml"
+  curl -fSL "$REPO/stack/$stack.yaml" -o "$WORKDIR/stack/$stack.yaml" \
+    || { echo "Erro ao baixar $stack.yaml"; exit 1; }
 done
 
+# Deploy das stacks usando envsubst para interpolar variáveis
 for stack in traefik portainer postgres pgadmin; do
-  echo "🚀 Deploy $stack..."
-  docker compose -f "$WORKDIR/stack/$stack.yaml" --env-file "$WORKDIR/stack/.wanzeller.env" config | docker stack deploy -c - "$stack"
+  envsubst < "$WORKDIR/stack/$stack.yaml" | \
+    docker stack deploy -c - "$stack"
 done
 
-echo "✅ Script concluído com sucesso."
+echo "Script concluído com sucesso."

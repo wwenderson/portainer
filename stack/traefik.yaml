@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   traefik:
     image: traefik:v2.11
@@ -20,21 +22,12 @@ services:
       - --api
       - --log.level=DEBUG
     ports:
-      - target: 80
-        published: 80
-        protocol: tcp
-        mode: host
-      - target: 443
-        published: 443
-        protocol: tcp
-        mode: host
-      - target: 8080
-        published: 8080
-        protocol: tcp
-        mode: host
+      - "80:80"
+      - "443:443"
+      - "8080:8080" # Painel do Traefik
     volumes:
       - traefik_certificates:/letsencrypt
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
     deploy:
       mode: replicated
       replicas: 1
@@ -50,4 +43,4 @@ volumes:
 
 networks:
   traefik_public:
-    external: true  
+    external: true
