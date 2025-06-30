@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   traefik:
@@ -22,9 +21,18 @@ services:
       - --api
       - --log.level=DEBUG
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080" # Painel do Traefik
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
     volumes:
       - traefik_certificates:/letsencrypt
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
