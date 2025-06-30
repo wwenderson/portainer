@@ -70,12 +70,6 @@ RADICAL=$(echo "$DOMINIO" | awk -F. '{print $(NF-1)}')
 # Exportar variáveis para envsubst
 export DOMINIO EMAIL USUARIO RADICAL POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
 
-# Criar secret GLOBAL_SECRET
-SECRET_NAME="GLOBAL_SECRET"
-if ! docker secret inspect "$SECRET_NAME" &>/dev/null; then
-  openssl rand -base64 32 | docker secret create "$SECRET_NAME" -
-fi
-
 # Gerar arquivo de ambiente
 cat > "$WORKDIR/stack/.wanzeller.env" <<EOF
 DOMINIO=$DOMINIO
