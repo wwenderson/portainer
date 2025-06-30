@@ -4,11 +4,11 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: ${EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - target: 80
-        published: 5050
-        protocol: tcp
-        mode: host
+    # ports:
+    #   - target: 80
+    #     published: 5050
+    #     protocol: tcp
+    #     mode: host
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:

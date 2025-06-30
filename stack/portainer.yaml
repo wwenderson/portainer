@@ -15,19 +15,19 @@ services:
   portainer:
     image: portainer/portainer-ce:latest
     command: -H tcp://tasks.agent:9001 --tlsskipverify
-    ports:
-      - target: 9443
-        published: 9443
-        protocol: tcp
-        mode: host
-      - target: 9000
-        published: 9000
-        protocol: tcp
-        mode: host
-      - target: 8000
-        published: 8000
-        protocol: tcp
-        mode: host
+    # ports:
+    #   - target: 9443
+    #     published: 9443
+    #     protocol: tcp
+    #     mode: host
+    #   - target: 9000
+    #     published: 9000
+    #     protocol: tcp
+    #     mode: host
+    #   - target: 8000
+    #     published: 8000
+    #     protocol: tcp
+    #     mode: host
     volumes:
       - portainer_data:/data
     networks:
