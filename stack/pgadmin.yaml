@@ -4,7 +4,7 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: ${EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
-     ports:
+    ports:
       - target: 80
         published: 5050
         protocol: tcp
