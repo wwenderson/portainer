@@ -42,5 +42,7 @@ volumes:
     external: true
 
 networks:
+  wanzeller_network:
+    external: true
   traefik_public:
     external: true
