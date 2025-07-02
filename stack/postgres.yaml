@@ -23,7 +23,7 @@ services:
 
 volumes:
   postgres_data:
-    driver: local
+    external: true
 
 networks:
   wanzeller_network:
