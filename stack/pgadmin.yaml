@@ -1,39 +1,52 @@
+version: '3.8'  # Define a versão utilizada do Docker Compose
+
 services:
+  # Serviço de interface gráfica para administração de bancos PostgreSQL
   pgadmin:
-    image: dpage/pgadmin4
+    image: dpage/pgadmin4  # Usa a imagem oficial mais recente do pgAdmin4
+
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: ${EMAIL}               # E-mail padrão utilizado para login inicial
+      PGADMIN_DEFAULT_PASSWORD: ${POSTGRES_PASSWORD}  # Senha padrão para acesso inicial ao pgAdmin
+
+    # Configuração de portas comentadas; usadas apenas caso queira expor diretamente (sem Traefik)
     # ports:
-    #   - target: 80
-    #     published: 5050
+    #   - target: 80           # Porta padrão interna do pgAdmin
+    #     published: 5050      # Porta exposta no host
     #     protocol: tcp
     #     mode: host
+
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - pgadmin_data:/var/lib/pgadmin  # Volume persistente para dados e configurações do pgAdmin
+
     networks:
-      - wanzeller_network
-      - traefik_public
+      - wanzeller_network  # Rede privada para comunicação segura com serviços internos (ex: PostgreSQL)
+      - traefik_public     # Rede pública para exposição via proxy reverso Traefik
+
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: replicated            # Utiliza replicação simples no Swarm
+      replicas: 1                 # Apenas uma instância necessária para simplicidade e persistência
       placement:
         constraints:
-          - node.role == manager
+          - node.role == manager  # Roda exclusivamente no nó manager do Docker Swarm
+
       labels:
+        # Labels para integração com Traefik (exposição segura via HTTPS)
         - "traefik.enable=true"
         - "traefik.docker.network=traefik_public"
-        - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.${DOMINIO}`)"
-        - "traefik.http.routers.pgadmin.entrypoints=websecure"
-        - "traefik.http.routers.pgadmin.tls.certresolver=le"
-        - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+        - "traefik.http.routers.pgadmin.rule=Host(`pgadmin.${DOMINIO}`)"  # URL de acesso ao serviço pgAdmin
+        - "traefik.http.routers.pgadmin.entrypoints=websecure"            # Usa entrada HTTPS segura
+        - "traefik.http.routers.pgadmin.tls.certresolver=le"              # Habilita certificados automáticos Let's Encrypt
+        - "traefik.http.services.pgadmin.loadbalancer.server.port=80"     # Porta interna para balanceamento de carga via Traefik
 
+# Volume externo usado para persistência do pgAdmin
 volumes:
   pgadmin_data:
-    external: true
+    external: true  # Volume criado previamente fora deste Compose
 
+# Redes externas utilizadas pelos serviços
 networks:
   wanzeller_network:
-    external: true
+    external: true  # Rede interna pré-criada para comunicação segura entre serviços
   traefik_public:
-    external: true
+    external: true  # Rede pública utilizada pelo Traefik para exposição externa

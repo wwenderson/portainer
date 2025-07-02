@@ -1,48 +1,63 @@
-version: '3.8'
+version: '3.8'  # Versão da especificação Docker Compose utilizada
 
 services:
   traefik:
-    image: traefik:v2.11
+    image: traefik:v2.11  # Usa a versão estável do Traefik v2.11
     command:
+      # Habilita o provedor Docker e configura endpoints HTTP e HTTPS
       - --providers.docker=true
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.address=:80  # Entrada HTTP padrão
+      - --entrypoints.websecure.address=:443  # Entrada HTTPS padrão
+
+      # Restringe o Traefik a utilizar apenas containers explicitamente configurados
       - --providers.docker.exposedbydefault=false
+      # Ativa o modo swarm para integração nativa com Docker Swarm
       - --providers.docker.swarmMode=true
+      # Especifica a rede Docker usada pelo Traefik para comunicação com serviços
       - --providers.docker.network=traefik_public
+      # Comunicação direta com o daemon Docker através do socket Unix
       - --providers.docker.endpoint=unix:///var/run/docker.sock
-      # Configuração para SSL Let's Encrypt
+
+      # Configurações de certificados SSL automáticos (Let's Encrypt)
       - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
-      - --certificatesresolvers.le.acme.email=${EMAIL}
-      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
-      # Global HTTP -> HTTPS
+      - --certificatesresolvers.le.acme.email=${EMAIL}  # E-mail para registro Let's Encrypt
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json  # Local de armazenamento dos certificados
+
+      # Redirecionamento global de todo tráfego HTTP para HTTPS
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
       - --entrypoints.web.http.redirections.entryPoint.scheme=https
-      # API e logs (opcional)
-      - --api
-      - --log.level=DEBUG
+
+      # Configuração da API de administração e nível de logs
+      - --api  # Habilita o dashboard/API do Traefik
+      - --log.level=DEBUG  # Define o nível detalhado dos logs (DEBUG para troubleshooting)
+
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080" # Painel do Traefik
+      - "80:80"    # Porta HTTP exposta ao mundo externo
+      - "443:443"  # Porta HTTPS exposta ao mundo externo
+      - "8080:8080"  # Porta do painel administrativo do Traefik
+
     volumes:
-      - traefik_certificates:/letsencrypt
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - traefik_certificates:/letsencrypt  # Volume persistente para certificados SSL
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"  # Acesso somente-leitura ao Docker Socket
+
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: replicated  # Utiliza replicação (Swarm mode)
+      replicas: 1  # Uma única instância do serviço
       placement:
         constraints:
-          - node.role == manager
-    networks:
-      - traefik_public
+          - node.role == manager  # Traefik roda exclusivamente no nó manager do Swarm
 
+    networks:
+      - traefik_public  # Conecta o serviço à rede pública Traefik
+
+# Definição dos volumes externos utilizados pelo Traefik
 volumes:
   traefik_certificates:
-    external: true
+    external: true  # Indica que o volume foi criado manualmente fora deste arquivo Compose
 
+# Definição das redes externas utilizadas por este serviço
 networks:
   wanzeller_network:
-    external: true
+    external: true  # Rede adicional para comunicação com serviços internos
   traefik_public:
-    external: true
+    external: true  # Rede pública utilizada para exposição dos serviços via Traefik

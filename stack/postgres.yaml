@@ -1,30 +1,40 @@
+version: '3.8'  # Especifica a versão utilizada do Docker Compose
+
 services:
+  # Serviço de banco de dados PostgreSQL
   postgres:
-    image: postgres:14
+    image: postgres:14  # Versão específica do PostgreSQL utilizada (14)
+    
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}            # Usuário principal do banco PostgreSQL
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}    # Senha associada ao usuário PostgreSQL
+      POSTGRES_DB: ${POSTGRES_DB}                # Nome do banco de dados inicial a ser criado
+
     ports:
-      - target: 5432
-        published: 5432
-        protocol: tcp
-        mode: host
+      - target: 5432          # Porta interna padrão do PostgreSQL
+        published: 5432       # Porta exposta no host para acesso externo
+        protocol: tcp         # Protocolo utilizado
+        mode: host            # Modo de publicação no host diretamente
+
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data  # Armazenamento persistente para os dados do PostgreSQL
+
     networks:
-      - wanzeller_network
+      - wanzeller_network  # Conecta o serviço à rede interna definida para integração segura com outros serviços
+
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: replicated           # Modo replicado (Swarm mode)
+      replicas: 1                # Apenas uma instância para simplificar persistência e evitar conflitos
       placement:
         constraints:
-          - node.role == manager
+          - node.role == manager # Garante execução exclusivamente no nó manager do Swarm
 
+# Definição dos volumes externos usados pelo PostgreSQL
 volumes:
   postgres_data:
-    external: true
+    external: true  # Indica que o volume já existe e foi criado previamente fora deste Compose
 
+# Redes externas para comunicação entre os serviços da stack
 networks:
   wanzeller_network:
-    external: true
+    external: true  # Rede previamente criada e utilizada para comunicação interna segura entre serviços

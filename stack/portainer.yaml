@@ -1,20 +1,24 @@
+version: '3.8'  # Versão do Docker Compose utilizada
 
 services:
+  # Serviço responsável por conectar Portainer aos agentes Docker remotos
   agent:
-    image: portainer/agent:latest
+    image: portainer/agent:latest  # Usa sempre a versão mais recente do agente Portainer
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/volumes:/var/lib/docker/volumes
+      - /var/run/docker.sock:/var/run/docker.sock  # Dá acesso ao socket Docker para monitoramento
+      - /var/lib/docker/volumes:/var/lib/docker/volumes  # Permite gerenciamento dos volumes Docker
     networks:
-      - agent_network
+      - agent_network  # Rede dedicada para comunicação entre Portainer e seus agentes
     deploy:
-      mode: global
+      mode: global  # Executa um agente em cada nó disponível no Swarm
       placement:
-        constraints: [ node.platform.os == linux ]
+        constraints: [ node.platform.os == linux ]  # Limita execução somente a sistemas Linux
 
+  # Interface web do Portainer CE para gerenciamento gráfico do Docker
   portainer:
-    image: portainer/portainer-ce:latest
-    command: -H tcp://tasks.agent:9001 --tlsskipverify
+    image: portainer/portainer-ce:latest  # Usa sempre a versão mais recente do Portainer Community Edition
+    command: -H tcp://tasks.agent:9001 --tlsskipverify  # Conecta-se ao agente via TCP sem verificação TLS
+    # Configurações opcionais de portas (comentadas para uso com Traefik)
     # ports:
     #   - target: 9443
     #     published: 9443
@@ -29,30 +33,33 @@ services:
     #     protocol: tcp
     #     mode: host
     volumes:
-      - portainer_data:/data
+      - portainer_data:/data  # Volume persistente para armazenar dados e configurações do Portainer
     networks:
-      - agent_network
-      - traefik_public
+      - agent_network     # Conecta-se aos agentes Portainer
+      - traefik_public    # Conecta-se à rede pública para exposição via Traefik
     deploy:
-      mode: replicated
+      mode: replicated  # Usa replicação simples (apenas uma instância necessária)
       replicas: 1
       placement:
-        constraints: [ node.role == manager ]
+        constraints: [ node.role == manager ]  # Executa apenas no nó manager do Swarm
       labels:
+        # Configurações específicas do Traefik para exposição segura via HTTPS
         - "traefik.enable=true"
         - "traefik.docker.network=traefik_public"
-        - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMINIO}`)"
-        - "traefik.http.routers.portainer.entrypoints=websecure"
-        - "traefik.http.routers.portainer.tls.certresolver=le"
-        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMINIO}`)"  # Define URL de acesso
+        - "traefik.http.routers.portainer.entrypoints=websecure"              # Usa entrada HTTPS
+        - "traefik.http.routers.portainer.tls.certresolver=le"                # Certificados via Let's Encrypt
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000"     # Porta interna do Portainer exposta
 
+# Redes externas utilizadas pelo stack
 networks:
   traefik_public:
     external: true
-    attachable: true
+    attachable: true  # Permite que outros containers (não Swarm) sejam conectados manualmente
   agent_network:
-    external: true
+    external: true    # Rede utilizada exclusivamente para comunicação interna com agentes
 
+# Volumes externos utilizados para persistência dos dados do Portainer
 volumes:
   portainer_data:
-    external: true
+    external: true  # Indica que o volume já existe previamente e não será criado automaticamente

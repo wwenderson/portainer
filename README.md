@@ -33,11 +33,9 @@ Este projeto oferece uma solução integrada, robusta e segura para implantar ra
 ## Configuração inicial do Docker Swarm
 
 Execute no terminal para ativar o Docker Swarm:
-
 ```bash
 docker swarm init
 ```
-
 ---
 
 ## Instalação Automatizada
@@ -66,18 +64,17 @@ bash <(curl -fsSL https://raw.githubusercontent.com/wwenderson/portainer/main/wa
 Após a instalação, os serviços estarão acessíveis nos seguintes endereços:
 
 - **Portainer CE:**
-  ```
+```
   URL: https://portainer.seudominio.com
-  ```
-  
+```
+
 - **PGAdmin (Gestão do PostgreSQL):**
-  ```
+```
   URL: https://pgadmin.seudominio.com
   Usuário: admin@seudominio.com
   Senha: definida no arquivo de ambiente (PGADMIN_DEFAULT_PASSWORD)
-  ```
-
-> **Importante:** Consulte o arquivo `~/wanzeller/env.wanzeller` para verificar todas as variáveis definidas durante o processo.
+```
+Importante: Consulte o arquivo `~/wanzeller/env.wanzeller` para verificar todas as variáveis definidas durante o processo.
 
 ---
 
@@ -109,12 +106,12 @@ Todos os arquivos ficam organizados no diretório `~/wanzeller`:
 
 No Portainer, use a opção de criação de stacks a partir do Git:
 
-- Repositório: `https://github.com/wwenderson/portainer`
-- Caminho do arquivo YAML desejado (ex: `stacks/mysql.yaml`)
+- Repositório: https://github.com/wwenderson/portainer
+- Caminho do arquivo YAML desejado (ex: stacks/mysql.yaml)
 - Variáveis necessárias:
-  - `DOMINIO` (ex: seudominio.com)
-  - `USUARIO` (seu usuário)
-  - `EMAIL` (ex: seunome@seudominio.com)
+  - DOMINIO (ex: seudominio.com)
+  - USUARIO (seu usuário)
+  - EMAIL (ex: seunome@seudominio.com)
 
 ---
 
@@ -131,13 +128,7 @@ Este projeto foi amplamente testado nas seguintes configurações:
 
 ## Autor e Suporte
 
-**Wenderson Wanzeller**  
-Engenheiro Informático, Mestre em Engenharia Informática, Atuário registado (PT e BR), Jornalista registado (PT e BR), Analista de Crédito, Docente em Engenharia Informática e Multimédia  
-[www.wendersonwanzeller.com](https://www.wendersonwanzeller.com)  
+**Wenderson Wanzeller**
+Engenheiro Informático, Mestre em Engenharia Informática, Atuário registado (PT e BR), Jornalista registado (PT e BR), Analista de Crédito, Docente em Engenharia Informática e Multimédia
+[www.wendersonwanzeller.com](https://www.wendersonwanzeller.com) 
 [GitHub](https://github.com/wwenderson)
-
----
-
-## Licença
-
-Este projeto é distribuído sob licença livre. Fique à vontade para reutilizar, modificar e redistribuir, mantendo obrigatoriamente os créditos ao autor original.
