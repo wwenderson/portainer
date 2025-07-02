@@ -92,7 +92,7 @@ solicitar_dominio() {
   done
 }
 
-solicitar_postgres_credenciais() {
+solicitar_credenciais_db() {
   while true; do
     read -p "Informe o usuário do Postgres (ex: admin): " POSTGRES_USER
     [[ "$POSTGRES_USER" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
@@ -100,10 +100,15 @@ solicitar_postgres_credenciais() {
   done
 
   while true; do
-    read -s -p "Informe a senha do Postgres: " POSTGRES_PASSWORD
+    read -s -p "Informe a senha do banco de dados: " POSTGRES_PASSWORD
     echo
-    [[ -n "$POSTGRES_PASSWORD" ]] && break
-    echo "Senha não pode ser vazia."
+    if [[ -z "$POSTGRES_PASSWORD" ]]; then
+      echo "Senha não pode ser vazia."
+    elif [[ "$POSTGRES_PASSWORD" =~ [\$\\\"\'\`] ]]; then
+      echo "A senha não pode conter os caracteres especiais: \$ \\ \" ' \`"
+    else
+      break
+    fi
   done
 
   while true; do
@@ -117,18 +122,10 @@ solicitar_postgres_credenciais() {
 solicitar_usuario
 solicitar_email
 solicitar_dominio
-solicitar_postgres_credenciais
+solicitar_credenciais_db
 
 # Exporta variáveis de ambiente para uso com envsubst
 export DOMINIO EMAIL USUARIO POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB  # Necessário para envsubst
-
-echo "⚠️ ATENÇÃO: Este script irá sobrescrever dados persistentes do Portainer e pgAdmin."
-echo "⚠️ Se continuar, todos os dados de configuração antigos serão perdidos."
-read -p 'Deseja continuar e RESETAR os dados persistentes? (s/N): ' CONFIRMA_RESET
-if [[ ! "$CONFIRMA_RESET" =~ ^[sS](im)?$ ]]; then
-  echo "Operação cancelada."
-  exit 0
-fi
 
 # Cria o diretório de trabalho para armazenar os arquivos YAML e variáveis
 mkdir -p "$WORKDIR/stack"
