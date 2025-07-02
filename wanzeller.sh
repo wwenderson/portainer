@@ -1,50 +1,55 @@
 #!/bin/bash
-set -e
-umask 077
-trap 'echo "Script interrompido."; exit 1' INT
+set -e  # Encerra imediatamente se qualquer comando retornar erro
+readonly REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"  # URL do repositório contendo os arquivos YAML
+readonly WORKDIR="$HOME/wanzeller"  # Diretório de trabalho local
+umask 077  # Garante permissões seguras para os arquivos criados
+trap 'echo "Script interrompido."; exit 1' INT  # Captura interrupção manual (Ctrl+C)
 
-REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"
-WORKDIR="$HOME/wanzeller"
-
-# Verificar dependências
-for cmd in docker openssl awk curl grep envsubst; do
+# Verifica se todas as dependências estão instaladas
+for cmd in docker openssl awk curl grep; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "Dependência '$cmd' não encontrada. Instale antes de continuar."
+    echo "❌ A dependência '$cmd' não foi encontrada. Instale antes de continuar."
     exit 1
   fi
 done
 
-# Criar diretório de trabalho
+# Verifica e instala o 'envsubst' caso não esteja presente
+if ! command -v envsubst >/dev/null 2>&1; then
+  echo "Instalando 'envsubst' (pacote gettext)..."
+  sudo apt-get update -qq && sudo apt-get install -y gettext
+fi
+
+# Cria o diretório de trabalho para armazenar os arquivos YAML e variáveis
 mkdir -p "$WORKDIR/stack"
 cd "$WORKDIR"
 
-# Inicializar Docker Swarm (se necessário)
+# Inicializa o Docker Swarm se ainda não estiver ativo
 if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw active; then
   docker swarm init
 fi
 
-# Ler nome de usuário base
+# Solicita interativamente o nome de usuário base
 while true; do
   read -p "Informe o nome de usuário base (ex: wanzeller): " USUARIO
   [[ "$USUARIO" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
   echo "Nome de usuário inválido. Mínimo 3 caracteres alfanuméricos ou underline."
 done
 
-# Ler e-mail principal
+# Solicita o e-mail principal para certificados SSL Let's Encrypt
 while true; do
   read -p "Informe o e-mail principal (ex: voce@dominio.com): " EMAIL
   [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
   echo "E-mail inválido."
 done
 
-# Ler domínio base
+# Solicita o domínio principal que será usado pelo Traefik e Portainer
 while true; do
   read -p "Informe o domínio principal (ex: seudominio.com): " DOMINIO
-  [[ "$DOMINIO" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
+  [[ "$DOMINIO" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$ ]] && break
   echo "Domínio inválido."
 done
 
-# Ler variáveis do Postgres
+# Coleta credenciais e nome do banco de dados PostgreSQL
 while true; do
   read -p "Informe o usuário do Postgres (ex: admin): " POSTGRES_USER
   [[ "$POSTGRES_USER" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
@@ -64,10 +69,10 @@ while true; do
   echo "Nome do banco inválido."
 done
 
-# Exportar variáveis para envsubst
+# Exporta variáveis de ambiente para uso com envsubst
 export DOMINIO EMAIL USUARIO POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
 
-# Gerar arquivo de ambiente
+# Cria arquivo .env com as variáveis para referência futura
 cat > "$WORKDIR/stack/.wanzeller.env" <<EOF
 DOMINIO=$DOMINIO
 EMAIL=$EMAIL
@@ -77,22 +82,54 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=$POSTGRES_DB
 EOF
 
-# Criar redes overlay necessárias
+# Cria redes overlay necessárias caso ainda não existam
 for net in traefik_public agent_network wanzeller_network; do
   docker network inspect "$net" &>/dev/null || \
     docker network create --driver overlay --attachable "$net"
 done
 
-# Baixar arquivos YAML atualizados do repositório
+# Verifica se já existem stacks ativas (traefik, portainer, postgres, pgadmin)
+# Se existirem, pergunta ao usuário se deseja removê-las antes do novo deploy
+STACKS=("traefik" "portainer" "postgres" "pgadmin")
+DEPLOY_EXISTENTE=()
+
+for stack in "${STACKS[@]}"; do
+  # Verifica se a stack atual já está ativa
+  if docker stack ls --format '{{.Name}}' | grep -q "^${stack}$"; then
+    DEPLOY_EXISTENTE+=("$stack")
+  fi
+done
+
+# Se houver pelo menos uma stack ativa, solicitar confirmação do usuário para remover todas
+if [ ${#DEPLOY_EXISTENTE[@]} -gt 0 ]; then
+  echo "⚠️ As seguintes stacks já estão ativas: ${DEPLOY_EXISTENTE[*]}"
+  read -p "Deseja remover todas e reinstalar? (s/N): " RESPOSTA
+  if [[ "$RESPOSTA" =~ ^[sS](im)?$ ]]; then
+    # Executa a remoção das stacks listadas com uma pausa de 5 segundos entre cada uma
+    for stack in "${DEPLOY_EXISTENTE[@]}"; do
+      echo "Removendo stack '$stack'..."
+      docker stack rm "$stack"
+      sleep 5
+    done
+  else
+    # Caso o usuário opte por não remover, o script é encerrado de forma segura
+    echo "❌ Operação cancelada pelo usuário."
+    exit 0
+  fi
+fi
+
+# Baixa os arquivos YAML correspondentes às stacks
 for stack in traefik portainer postgres pgadmin; do
   curl -fSL "$REPO/stack/$stack.yaml" -o "$WORKDIR/stack/$stack.yaml" \
     || { echo "Erro ao baixar $stack.yaml"; exit 1; }
 done
 
-# Deploy das stacks usando envsubst para interpolar variáveis
+# Substitui variáveis e realiza o deploy das stacks com Docker Swarm
 for stack in traefik portainer postgres pgadmin; do
-  envsubst < "$WORKDIR/stack/$stack.yaml" | \
-    docker stack deploy -c - "$stack"
+  envsubst '${DOMINIO} ${EMAIL} ${USUARIO} ${POSTGRES_USER} ${POSTGRES_PASSWORD} ${POSTGRES_DB}' < "$WORKDIR/stack/$stack.yaml" | \
+    docker stack deploy --with-registry-auth -c - "$stack" || { echo "❌ Falha ao fazer deploy de $stack."; exit 1; }
 done
 
+# Confirma finalização do processo
+echo "✅ Todas as operações foram concluídas sem erros."
 echo "Script concluído com sucesso."
