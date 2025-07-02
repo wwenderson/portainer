@@ -60,8 +60,10 @@ if [ ${#DEPLOY_EXISTENTE[@]} -gt 0 ]; then
       echo "Removendo volumes persistentes de Portainer e pgAdmin..."
       docker volume rm portainer_data pgadmin_data &>/dev/null || true
       echo "Volumes removidos."
+      REMOVER_VOLUMES=true
     else
       echo "Volumes mantidos."
+      REMOVER_VOLUMES=false
     fi
   else
     echo "Stacks mantidas. Continuando com o script..."
@@ -146,6 +148,13 @@ for net in traefik_public agent_network wanzeller_network; do
   docker network inspect "$net" &>/dev/null || \
     docker network create --driver overlay --attachable "$net"
 done
+
+# Cria volumes externos necessários caso tenham sido mantidos
+if [ "$REMOVER_VOLUMES" != true ]; then
+  for vol in pgadmin_data portainer_data postgres_postgres_data traefik_certificates; do
+    docker volume inspect "$vol" &>/dev/null || docker volume create "$vol"
+  done
+fi
 
 echo "🧹 Removendo volumes persistentes de Portainer e pgAdmin (se existirem)..."
 docker volume rm portainer_data pgadmin_data &>/dev/null || true
