@@ -55,9 +55,9 @@ if [ ${#DEPLOY_EXISTENTE[@]} -gt 0 ]; then
       sleep 5
     done
     echo "⚠️ As stacks foram removidas."
-    read -p "ATENÇÃO: Deseja também remover definitivamente os volumes 'portainer_data' e 'pgadmin_data'? (s/N): " RESPOSTA_VOLUMES
+    read -p "ATENÇÃO: Deseja também remover definitivamente os volumes 'portainer_data', 'pgadmin_data' e o postgres_data? (s/N): " RESPOSTA_VOLUMES
     if [[ "$RESPOSTA_VOLUMES" =~ ^[sS](im)?$ ]]; then
-      echo "Removendo volumes persistentes de Portainer e pgAdmin..."
+      echo "Removendo volumes persistentes de Portainer, pgAdmin e postgres_data..."
       docker volume rm portainer_data pgadmin_data postgres_data &>/dev/null || true
       echo "Volumes removidos."
       REMOVER_VOLUMES=true
