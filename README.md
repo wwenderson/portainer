@@ -115,6 +115,30 @@ No Portainer, use a opção de criação de stacks a partir do Git:
 
 ---
 
+## como acessar o postgresql via pgadmin ou dbeaver
+
+Após o deploy da stack, o PostgreSQL poderá ser acessado externamente usando os parâmetros definidos nas variáveis do script:
+
+- **Host/IP:** endereço público do seu servidor (ex: 123.45.67.89)
+- **Porta:** `5432` (padrão do PostgreSQL)
+- **Database:** valor da variável `POSTGRES_DB`
+- **Usuário:** valor da variável `POSTGRES_USER`
+- **Senha:** valor da variável `POSTGRES_PASSWORD`
+
+Configurações adicionais:
+
+- **Autenticação Kerberos:** desativado
+- **Salvar senha:** opcional
+- **Role:** deixar em branco
+- **Serviço:** deixar em branco
+
+Esses parâmetros são definidos pelas seguintes variáveis do script:
+- `POSTGRES_USER` (nome de usuário do PostgreSQL)
+- `POSTGRES_PASSWORD` (senha do PostgreSQL)
+- `POSTGRES_DB` (nome do banco de dados)
+
+> ⚠️ Atenção: certifique-se de que a porta 5432 está liberada no firewall do servidor para conexões externas.
+
 ## Ambiente Validado
 
 Este projeto foi amplamente testado nas seguintes configurações:
