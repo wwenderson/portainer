@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e  # Encerra imediatamente se qualquer comando retornar erro
+set -o pipefail  # Encerra o script se qualquer comando em um pipeline falhar
 readonly REPO="https://raw.githubusercontent.com/wwenderson/portainer/main"  # URL do repositório contendo os arquivos YAML
 readonly WORKDIR="$HOME/wanzeller"  # Diretório de trabalho local
 umask 077  # Garante permissões seguras para os arquivos criados
@@ -17,76 +18,13 @@ done
 if ! command -v envsubst >/dev/null 2>&1; then
   echo "Instalando 'envsubst' (pacote gettext)..."
   sudo apt-get update -qq && sudo apt-get install -y gettext
+  if command -v envsubst >/dev/null 2>&1; then
+    echo "'envsubst' instalado com sucesso."
+  else
+    echo "Falha ao instalar 'envsubst'."
+    exit 1
+  fi
 fi
-
-# Cria o diretório de trabalho para armazenar os arquivos YAML e variáveis
-mkdir -p "$WORKDIR/stack"
-cd "$WORKDIR"
-
-# Inicializa o Docker Swarm se ainda não estiver ativo
-if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw active; then
-  docker swarm init
-fi
-
-# Solicita interativamente o nome de usuário base
-while true; do
-  read -p "Informe o nome de usuário base (ex: wanzeller): " USUARIO
-  [[ "$USUARIO" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
-  echo "Nome de usuário inválido. Mínimo 3 caracteres alfanuméricos ou underline."
-done
-
-# Solicita o e-mail principal para certificados SSL Let's Encrypt
-while true; do
-  read -p "Informe o e-mail principal (ex: voce@dominio.com): " EMAIL
-  [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
-  echo "E-mail inválido."
-done
-
-# Solicita o domínio principal que será usado pelo Traefik e Portainer
-while true; do
-  read -p "Informe o domínio principal (ex: seudominio.com): " DOMINIO
-  [[ "$DOMINIO" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$ ]] && break
-  echo "Domínio inválido."
-done
-
-# Coleta credenciais e nome do banco de dados PostgreSQL
-while true; do
-  read -p "Informe o usuário do Postgres (ex: admin): " POSTGRES_USER
-  [[ "$POSTGRES_USER" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
-  echo "Usuário do Postgres inválido."
-done
-
-while true; do
-  read -s -p "Informe a senha do Postgres: " POSTGRES_PASSWORD
-  echo
-  [[ -n "$POSTGRES_PASSWORD" ]] && break
-  echo "Senha não pode ser vazia."
-done
-
-while true; do
-  read -p "Informe o nome do banco de dados (ex: banco): " POSTGRES_DB
-  [[ "$POSTGRES_DB" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
-  echo "Nome do banco inválido."
-done
-
-# Exporta variáveis de ambiente para uso com envsubst
-export DOMINIO EMAIL USUARIO POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
-
-# Cria arquivo .env com as variáveis para referência futura
-cat > "$WORKDIR/stack/.wanzeller.env" <<EOF
-DOMINIO=$DOMINIO
-EMAIL=$EMAIL
-USUARIO=$USUARIO
-POSTGRES_USER=$POSTGRES_USER
-POSTGRES_PASSWORD=$POSTGRES_PASSWORD
-POSTGRES_DB=$POSTGRES_DB
-EOF
-
-# Cria redes overlay necessárias caso ainda não existam
-for net in traefik_public agent_network wanzeller_network; do
-  docker network inspect "$net" &>/dev/null || \
-    docker network create --driver overlay --attachable "$net"
-done
 
 # Verifica se já existem stacks ativas (traefik, portainer, postgres, pgadmin)
 # Se existirem, pergunta ao usuário se deseja removê-las antes do novo deploy
@@ -118,13 +56,92 @@ if [ ${#DEPLOY_EXISTENTE[@]} -gt 0 ]; then
   fi
 fi
 
+solicitar_usuario() {
+  while true; do
+    read -p "Informe o nome de usuário base (ex: wanzeller): " USUARIO
+    [[ "$USUARIO" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
+    echo "Nome de usuário inválido. Mínimo 3 caracteres alfanuméricos ou underline."
+  done
+}
+
+solicitar_email() {
+  while true; do
+    read -p "Informe o e-mail principal (ex: voce@dominio.com): " EMAIL
+    [[ "$EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]] && break
+    echo "E-mail inválido."
+  done
+}
+
+solicitar_dominio() {
+  while true; do
+    read -p "Informe o domínio principal (ex: seudominio.com): " DOMINIO
+    [[ "$DOMINIO" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,63}$ ]] && break
+    echo "Domínio inválido."
+  done
+}
+
+solicitar_postgres_credenciais() {
+  while true; do
+    read -p "Informe o usuário do Postgres (ex: admin): " POSTGRES_USER
+    [[ "$POSTGRES_USER" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
+    echo "Usuário do Postgres inválido."
+  done
+
+  while true; do
+    read -s -p "Informe a senha do Postgres: " POSTGRES_PASSWORD
+    echo
+    [[ -n "$POSTGRES_PASSWORD" ]] && break
+    echo "Senha não pode ser vazia."
+  done
+
+  while true; do
+    read -p "Informe o nome do banco de dados (ex: banco): " POSTGRES_DB
+    [[ "$POSTGRES_DB" =~ ^[a-zA-Z0-9_]{3,}$ ]] && break
+    echo "Nome do banco inválido."
+  done
+}
+
+# Chama as funções para solicitar as informações do usuário
+solicitar_usuario
+solicitar_email
+solicitar_dominio
+solicitar_postgres_credenciais
+
+# Exporta variáveis de ambiente para uso com envsubst
+export DOMINIO EMAIL USUARIO POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB  # Necessário para envsubst
+
+# Cria o diretório de trabalho para armazenar os arquivos YAML e variáveis
+mkdir -p "$WORKDIR/stack"
+cd "$WORKDIR"
+
+# Inicializa o Docker Swarm se ainda não estiver ativo
+if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw active; then
+  docker swarm init
+fi
+
+# Cria arquivo .env com as variáveis para referência futura
+cat > "$WORKDIR/stack/.wanzeller.env" <<EOF
+DOMINIO=$DOMINIO
+EMAIL=$EMAIL
+USUARIO=$USUARIO
+POSTGRES_USER=$POSTGRES_USER
+POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+POSTGRES_DB=$POSTGRES_DB
+EOF
+
+# Cria redes overlay necessárias caso ainda não existam
+for net in traefik_public agent_network wanzeller_network; do
+  docker network inspect "$net" &>/dev/null || \
+    docker network create --driver overlay --attachable "$net"
+done
+
 # Baixa os arquivos YAML correspondentes às stacks
 for stack in traefik portainer postgres pgadmin; do
   curl -fSL "$REPO/stack/$stack.yaml" -o "$WORKDIR/stack/$stack.yaml" \
     || { echo "Erro ao baixar $stack.yaml"; exit 1; }
 done
 
-# Substitui variáveis e realiza o deploy das stacks com Docker Swarm
+# Substitui variáveis com envsubst e realiza o deploy das stacks
 for stack in traefik portainer postgres pgadmin; do
   envsubst '${DOMINIO} ${EMAIL} ${USUARIO} ${POSTGRES_USER} ${POSTGRES_PASSWORD} ${POSTGRES_DB}' < "$WORKDIR/stack/$stack.yaml" | \
     docker stack deploy --with-registry-auth -c - "$stack" || { echo "❌ Falha ao fazer deploy de $stack."; exit 1; }
