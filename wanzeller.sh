@@ -26,6 +26,11 @@ if ! command -v envsubst >/dev/null 2>&1; then
   fi
 fi
 
+# Inicializa o Docker Swarm se ainda não estiver ativo
+if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw active; then
+  docker swarm init
+fi
+
 # Verifica se já existem stacks ativas (traefik, portainer, postgres, pgadmin)
 # Se existirem, pergunta ao usuário se deseja removê-las antes do novo deploy
 STACKS=("traefik" "portainer" "postgres" "pgadmin")
@@ -113,11 +118,6 @@ export DOMINIO EMAIL USUARIO POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB  # Nece
 # Cria o diretório de trabalho para armazenar os arquivos YAML e variáveis
 mkdir -p "$WORKDIR/stack"
 cd "$WORKDIR"
-
-# Inicializa o Docker Swarm se ainda não estiver ativo
-if ! docker info --format '{{.Swarm.LocalNodeState}}' | grep -qw active; then
-  docker swarm init
-fi
 
 # Cria arquivo .env com as variáveis para referência futura
 cat > "$WORKDIR/stack/.wanzeller.env" <<EOF
