@@ -71,7 +71,7 @@ Após a instalação, os serviços estarão acessíveis nos seguintes endereços
 - **PGAdmin (Gestão do PostgreSQL):**
 ```
   URL: https://pgadmin.seudominio.com
-  Usuário: admin@seudominio.com
+  Usuário: voce@seudominio.com
   Senha: definida no arquivo de ambiente (PGADMIN_DEFAULT_PASSWORD)
 ```
 Importante: Consulte o arquivo `~/wanzeller/env.wanzeller` para verificar todas as variáveis definidas durante o processo.

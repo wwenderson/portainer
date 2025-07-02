@@ -151,7 +151,7 @@ done
 
 # Cria volumes externos necessários caso tenham sido mantidos
 if [ "$REMOVER_VOLUMES" != true ]; then
-  for vol in pgadmin_data portainer_data postgres_postgres_data traefik_certificates; do
+  for vol in pgadmin_data portainer_data postgres_data traefik_certificates; do
     docker volume inspect "$vol" &>/dev/null || docker volume create "$vol"
   done
 fi
