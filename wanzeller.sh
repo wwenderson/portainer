@@ -54,10 +54,17 @@ if [ ${#DEPLOY_EXISTENTE[@]} -gt 0 ]; then
       docker stack rm "$stack"
       sleep 5
     done
+    echo "⚠️ ATENÇÃO: As stacks foram removidas. Esta operação pode REMOVER DEFINITIVAMENTE os dados persistentes dos serviços Portainer e pgAdmin."
+    read -p "Deseja também remover os volumes 'portainer_data' e 'pgadmin_data'? (s/N): " RESPOSTA_VOLUMES
+    if [[ "$RESPOSTA_VOLUMES" =~ ^[sS](im)?$ ]]; then
+      echo "Removendo volumes persistentes de Portainer e pgAdmin..."
+      docker volume rm portainer_data pgadmin_data &>/dev/null || true
+      echo "Volumes removidos (ou não existiam)."
+    else
+      echo "Volumes mantidos."
+    fi
   else
-    # Caso o usuário opte por não remover, o script é encerrado de forma segura
-    echo "❌ Operação cancelada pelo usuário."
-    exit 0
+    echo "Stacks mantidas. Continuando com o script..."
   fi
 fi
 
@@ -115,6 +122,14 @@ solicitar_postgres_credenciais
 # Exporta variáveis de ambiente para uso com envsubst
 export DOMINIO EMAIL USUARIO POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB  # Necessário para envsubst
 
+echo "⚠️ ATENÇÃO: Este script irá sobrescrever dados persistentes do Portainer e pgAdmin."
+echo "⚠️ Se continuar, todos os dados de configuração antigos serão perdidos."
+read -p 'Deseja continuar e RESETAR os dados persistentes? (s/N): ' CONFIRMA_RESET
+if [[ ! "$CONFIRMA_RESET" =~ ^[sS](im)?$ ]]; then
+  echo "Operação cancelada."
+  exit 0
+fi
+
 # Cria o diretório de trabalho para armazenar os arquivos YAML e variáveis
 mkdir -p "$WORKDIR/stack"
 cd "$WORKDIR"
@@ -134,6 +149,10 @@ for net in traefik_public agent_network wanzeller_network; do
   docker network inspect "$net" &>/dev/null || \
     docker network create --driver overlay --attachable "$net"
 done
+
+echo "🧹 Removendo volumes persistentes de Portainer e pgAdmin (se existirem)..."
+docker volume rm portainer_data pgadmin_data &>/dev/null || true
+echo "Volumes removidos ou não existentes."
 
 # Baixa os arquivos YAML correspondentes às stacks
 for stack in traefik portainer postgres pgadmin; do
