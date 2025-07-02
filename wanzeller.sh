@@ -54,12 +54,12 @@ if [ ${#DEPLOY_EXISTENTE[@]} -gt 0 ]; then
       docker stack rm "$stack"
       sleep 5
     done
-    echo "⚠️ ATENÇÃO: As stacks foram removidas. Esta operação pode REMOVER DEFINITIVAMENTE os dados persistentes dos serviços Portainer e pgAdmin."
-    read -p "Deseja também remover os volumes 'portainer_data' e 'pgadmin_data'? (s/N): " RESPOSTA_VOLUMES
+    echo "⚠️ As stacks foram removidas."
+    read -p "ATENÇÃO: Deseja também remover definitivamente os volumes 'portainer_data' e 'pgadmin_data'? (s/N): " RESPOSTA_VOLUMES
     if [[ "$RESPOSTA_VOLUMES" =~ ^[sS](im)?$ ]]; then
       echo "Removendo volumes persistentes de Portainer e pgAdmin..."
       docker volume rm portainer_data pgadmin_data &>/dev/null || true
-      echo "Volumes removidos (ou não existiam)."
+      echo "Volumes removidos."
     else
       echo "Volumes mantidos."
     fi
@@ -160,7 +160,7 @@ done
 # Substitui variáveis com envsubst e realiza o deploy das stacks
 for stack in traefik portainer postgres pgadmin; do
   envsubst '${DOMINIO} ${EMAIL} ${USUARIO} ${POSTGRES_USER} ${POSTGRES_PASSWORD} ${POSTGRES_DB}' < "$WORKDIR/stack/$stack.yaml" | \
-    docker stack deploy --with-registry-auth -c - "$stack" || { echo "❌ Falha ao fazer deploy de $stack."; exit 1; }
+    docker stack deploy --detach=true --with-registry-auth -c - "$stack" || { echo "❌ Falha ao fazer deploy de $stack."; exit 1; }
 done
 
 # Confirma finalização do processo
