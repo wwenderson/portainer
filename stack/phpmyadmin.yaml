@@ -1,0 +1,54 @@
+services:
+  # Serviço de interface gráfica para administração de bancos MySQL/MariaDB
+  phpmyadmin:
+    image: phpmyadmin:latest  # Usa a imagem oficial mais recente do phpMyAdmin
+
+    environment:
+      PMA_HOST: mysql                        # Nome do serviço do banco MySQL (pode ser um container na mesma rede)
+      PMA_USER: ${POSTGRES_USER}               # Usuário do banco (opcional se quiser login direto)
+      PMA_PASSWORD: ${POSTGRES_PASSWORD}       # Senha do usuário (opcional, recomendado com Traefik)
+      UPLOAD_LIMIT: 128M                    # Limite para uploads de ficheiros (ex: dumps)
+
+    # Configuração de portas comentadas; usadas apenas caso queira expor diretamente (sem Traefik)
+    # ports:
+    #   - target: 80
+    #     published: 8080
+    #     protocol: tcp
+    #     mode: host
+
+    volumes:
+      - phpmyadmin_data:/etc/phpmyadmin  # Volume persistente para configs e cache (opcional)
+
+    networks:
+      - wanzeller_network   # Rede privada para comunicação segura com MySQL
+      - traefik_public      # Rede pública para exposição via Traefik
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+
+      labels:
+        # Labels para integração com o Traefik (exposição segura via HTTPS)
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik_public"
+        - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.${DOMINIO}`)"
+        - "traefik.http.routers.phpmyadmin.entrypoints=websecure"
+        - "traefik.http.routers.phpmyadmin.tls.certresolver=le"
+        - "traefik.http.services.phpmyadmin.loadbalancer.server.port=80"
+        # Middleware para restrição por IP
+        # - "traefik.http.middlewares.ipwhitelist.ipwhitelist.sourcerange=201.10.20.30/32,189.55.100.0/24"
+
+# Volume externo para persistência de dados/configs do phpMyAdmin
+volumes:
+  phpmyadmin_data:
+    external: true  # Volume deve ser criado previamente
+
+# Redes externas utilizadas pelos serviços
+networks:
+  wanzeller_network:
+    external: true
+  traefik_public:
+    external: true

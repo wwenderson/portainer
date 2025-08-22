@@ -1,0 +1,39 @@
+services:
+  # Serviço de banco de dados MySQL
+  mysql:
+    image: mysql:8.0  # Versão específica do MySQL utilizada (8.0)
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${POSTGRES_PASSWORD}  # Senha do usuário root
+      MYSQL_DATABASE: ${POSTGRES_DB}            # Nome do banco de dados inicial
+      MYSQL_USER: ${POSTGRES_USER}                    # Usuário adicional
+      MYSQL_PASSWORD: ${POSTGRES_PASSWORD}            # Senha do usuário adicional
+
+    ports:
+      - target: 3306        # Porta interna padrão do MySQL
+        published: 3306     # Porta exposta no host para acesso externo
+        protocol: tcp
+        mode: host
+
+    volumes:
+      - mysql_data:/var/lib/mysql  # Armazenamento persistente dos dados do MySQL
+
+    networks:
+      - wanzeller_network  # Conecta o serviço à rede definida para comunicação segura
+
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager  # Executa apenas no nó manager do Swarm
+
+# Definição dos volumes externos usados pelo MySQL
+volumes:
+  mysql_data:
+    external: true  # Indica que o volume foi criado previamente
+
+# Redes externas para comunicação entre os serviços da stack
+networks:
+  wanzeller_network:
+    external: true
